@@ -20,12 +20,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_CERTS_DIR="${LOCAL_CERTS_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)/certs-local}"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CHALLENGE_DIR="${CHALLENGE_DIR:-$PROJECT_ROOT/.well-known/acme-challenge}"
-CERTBOT_BIN="${CERTBOT_BIN:-certbot}"
+DEFAULT_VENV_CERTBOT="$PROJECT_ROOT/.venv-certbot/bin/certbot"
+if [[ -x "$DEFAULT_VENV_CERTBOT" ]]; then
+  CERTBOT_BIN="${CERTBOT_BIN:-$DEFAULT_VENV_CERTBOT}"
+else
+  CERTBOT_BIN="${CERTBOT_BIN:-certbot}"
+fi
 CERTBOT_USE_SUDO="${CERTBOT_USE_SUDO:-false}"
 CERTBOT_CONFIG_DIR="${CERTBOT_CONFIG_DIR:-$LOCAL_CERTS_DIR/letsencrypt}"
 CERTBOT_WORK_DIR="${CERTBOT_WORK_DIR:-$LOCAL_CERTS_DIR/work}"
 CERTBOT_LOGS_DIR="${CERTBOT_LOGS_DIR:-$LOCAL_CERTS_DIR/logs}"
 CERTBOT_LIVE_DIR="${CERTBOT_LIVE_DIR:-$CERTBOT_CONFIG_DIR/live}"
+ISSUE_MODE="${ISSUE_MODE:-interactive}"
 
 MODE="${1:-auto}"
 
@@ -63,18 +69,30 @@ prepare_certbot_dirs() {
 issue_certificate() {
   prepare_certbot_dirs
 
-  certbot_exec certonly \
-    --manual \
-    --preferred-challenges http \
-    --manual-auth-hook "$SCRIPT_DIR/certbot-write-challenge.sh" \
-    --manual-cleanup-hook "$SCRIPT_DIR/certbot-cleanup-challenge.sh" \
-    --config-dir "$CERTBOT_CONFIG_DIR" \
-    --work-dir "$CERTBOT_WORK_DIR" \
-    --logs-dir "$CERTBOT_LOGS_DIR" \
-    -d "$PRIMARY_DOMAIN" -d "$SECONDARY_DOMAIN" \
-    --agree-tos \
-    --email "$EMAIL" \
-    --non-interactive
+  if [[ "$ISSUE_MODE" == "interactive" ]]; then
+    certbot_exec certonly \
+      --manual \
+      --preferred-challenges http \
+      --config-dir "$CERTBOT_CONFIG_DIR" \
+      --work-dir "$CERTBOT_WORK_DIR" \
+      --logs-dir "$CERTBOT_LOGS_DIR" \
+      -d "$PRIMARY_DOMAIN" -d "$SECONDARY_DOMAIN" \
+      --agree-tos \
+      --email "$EMAIL"
+  else
+    certbot_exec certonly \
+      --manual \
+      --preferred-challenges http \
+      --manual-auth-hook "$SCRIPT_DIR/certbot-write-challenge.sh" \
+      --manual-cleanup-hook "$SCRIPT_DIR/certbot-cleanup-challenge.sh" \
+      --config-dir "$CERTBOT_CONFIG_DIR" \
+      --work-dir "$CERTBOT_WORK_DIR" \
+      --logs-dir "$CERTBOT_LOGS_DIR" \
+      -d "$PRIMARY_DOMAIN" -d "$SECONDARY_DOMAIN" \
+      --agree-tos \
+      --email "$EMAIL" \
+      --non-interactive
+  fi
 }
 
 renew_certificate() {

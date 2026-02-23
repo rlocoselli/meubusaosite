@@ -6,10 +6,10 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CHALLENGE_DIR="${CHALLENGE_DIR:-$PROJECT_ROOT/.well-known/acme-challenge}"
 CHALLENGE_FILE="$CHALLENGE_DIR/$CERTBOT_TOKEN"
 AUTO_GIT_PUSH="${AUTO_GIT_PUSH:-true}"
-DEPLOY_WAIT_SECONDS="${DEPLOY_WAIT_SECONDS:-90}"
-POLL_TIMEOUT_SECONDS="${POLL_TIMEOUT_SECONDS:-180}"
+DEPLOY_WAIT_SECONDS="${DEPLOY_WAIT_SECONDS:-20}"
+POLL_TIMEOUT_SECONDS="${POLL_TIMEOUT_SECONDS:-60}"
 POLL_INTERVAL_SECONDS="${POLL_INTERVAL_SECONDS:-5}"
-PUSH_TIMEOUT_SECONDS="${PUSH_TIMEOUT_SECONDS:-45}"
+PUSH_TIMEOUT_SECONDS="${PUSH_TIMEOUT_SECONDS:-20}"
 CHALLENGE_URL="https://${CERTBOT_DOMAIN}/.well-known/acme-challenge/${CERTBOT_TOKEN}"
 STATE_FILE="$CHALLENGE_DIR/.pending-challenges"
 
@@ -31,11 +31,15 @@ if [[ "$AUTO_GIT_PUSH" == "true" ]]; then
 		(
 			cd "$PROJECT_ROOT"
 			git add "$CHALLENGE_DIR"
-			git commit -m "chore(acme): add challenge files for validation" || true
 			if command -v timeout >/dev/null 2>&1; then
-				timeout "$PUSH_TIMEOUT_SECONDS" git push || true
+				timeout "$PUSH_TIMEOUT_SECONDS" git -c commit.gpgsign=false commit --no-gpg-sign -m "chore(acme): add challenge files for validation" || true
 			else
-				git push || true
+				git -c commit.gpgsign=false commit --no-gpg-sign -m "chore(acme): add challenge files for validation" || true
+			fi
+			if command -v timeout >/dev/null 2>&1; then
+				timeout "$PUSH_TIMEOUT_SECONDS" env GIT_TERMINAL_PROMPT=0 git push || true
+			else
+				env GIT_TERMINAL_PROMPT=0 git push || true
 			fi
 		)
 		echo "Git push attempted for challenge file."
