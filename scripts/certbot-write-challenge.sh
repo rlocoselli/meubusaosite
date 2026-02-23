@@ -19,7 +19,7 @@ printf '%s' "$CERTBOT_VALIDATION" > "$CHALLENGE_FILE"
 echo "Challenge file written: $CHALLENGE_FILE"
 echo "Challenge URL expected: $CHALLENGE_URL"
 
-printf '%s %s\n' "$CERTBOT_DOMAIN" "$CERTBOT_TOKEN" >> "$STATE_FILE"
+printf '%s\t%s\t%s\n' "$CERTBOT_DOMAIN" "$CERTBOT_TOKEN" "$CERTBOT_VALIDATION" >> "$STATE_FILE"
 
 if [[ "${CERTBOT_REMAINING_CHALLENGES:-0}" != "0" ]]; then
 	echo "Waiting for remaining challenges to be prepared (${CERTBOT_REMAINING_CHALLENGES} left)."
@@ -37,14 +37,15 @@ if [[ "$AUTO_GIT_PUSH" == "true" ]]; then
 				git -c commit.gpgsign=false commit --no-gpg-sign -m "chore(acme): add challenge files for validation" || true
 			fi
 			if command -v timeout >/dev/null 2>&1; then
-				timeout "$PUSH_TIMEOUT_SECONDS" env GIT_TERMINAL_PROMPT=0 git push || true
+				timeout "$PUSH_TIMEOUT_SECONDS" env GIT_TERMINAL_PROMPT=0 git push
 			else
-				env GIT_TERMINAL_PROMPT=0 git push || true
+				env GIT_TERMINAL_PROMPT=0 git push
 			fi
 		)
-		echo "Git push attempted for challenge file."
+		echo "Git push completed for challenge files."
 	else
-		echo "Warning: git not found, skipping auto commit/push."
+		echo "Error: git not found; cannot publish challenge file automatically." >&2
+		exit 1
 	fi
 fi
 
@@ -55,10 +56,13 @@ if command -v curl >/dev/null 2>&1; then
 	elapsed=0
 	while (( elapsed < POLL_TIMEOUT_SECONDS )); do
 		all_ok=true
-		while read -r domain token; do
-			[[ -z "$domain" || -z "$token" ]] && continue
+		while IFS=$'\t' read -r domain token validation; do
+			[[ -z "$domain" || -z "$token" || -z "$validation" ]] && continue
 			url="https://${domain}/.well-known/acme-challenge/${token}"
-			if ! curl -fsS "$url" >/dev/null 2>&1; then
+			response="$(curl -fsS "$url" 2>/dev/null || true)"
+			response="${response//$'\n'/}"
+			response="${response//$'\r'/}"
+			if [[ "$response" != "$validation" ]]; then
 				all_ok=false
 				break
 			fi
@@ -71,8 +75,10 @@ if command -v curl >/dev/null 2>&1; then
 		sleep "$POLL_INTERVAL_SECONDS"
 		elapsed=$((elapsed + POLL_INTERVAL_SECONDS))
 	done
-	echo "Warning: challenge URLs not all reachable after ${POLL_TIMEOUT_SECONDS}s"
-	echo "Certbot may fail unless deployment completes immediately."
+	echo "Error: challenge URLs are not serving expected validation after ${POLL_TIMEOUT_SECONDS}s." >&2
+	echo "Check deployment and domain mapping before retrying." >&2
+	exit 1
 else
-	echo "Warning: curl not found, cannot verify challenge URL availability."
+	echo "Error: curl not found, cannot verify challenge URL availability." >&2
+	exit 1
 fi

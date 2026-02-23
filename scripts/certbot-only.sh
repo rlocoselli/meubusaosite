@@ -7,6 +7,10 @@ set -euo pipefail
 #   ./scripts/certbot-only.sh renew
 #   ./scripts/certbot-only.sh dry-run
 #   ./scripts/certbot-only.sh           # auto: issue if missing, else renew
+#
+# Issue mode:
+#   ISSUE_MODE=hook (default): create challenge file + git push via hooks
+#   ISSUE_MODE=interactive: manual copy/paste challenge
 
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
   echo "Please run this script directly (do not source it)." >&2
@@ -31,7 +35,7 @@ CERTBOT_CONFIG_DIR="${CERTBOT_CONFIG_DIR:-$LOCAL_CERTS_DIR/letsencrypt}"
 CERTBOT_WORK_DIR="${CERTBOT_WORK_DIR:-$LOCAL_CERTS_DIR/work}"
 CERTBOT_LOGS_DIR="${CERTBOT_LOGS_DIR:-$LOCAL_CERTS_DIR/logs}"
 CERTBOT_LIVE_DIR="${CERTBOT_LIVE_DIR:-$CERTBOT_CONFIG_DIR/live}"
-ISSUE_MODE="${ISSUE_MODE:-interactive}"
+ISSUE_MODE="${ISSUE_MODE:-hook}"
 
 MODE="${1:-auto}"
 
