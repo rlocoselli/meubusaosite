@@ -6,6 +6,7 @@ set -euo pipefail
 #   ./scripts/certbot-only.sh issue
 #   ./scripts/certbot-only.sh renew
 #   ./scripts/certbot-only.sh dry-run
+#   ./scripts/certbot-only.sh           # auto: issue if missing, else renew
 
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
   echo "Please run this script directly (do not source it)." >&2
@@ -20,8 +21,13 @@ LOCAL_CERTS_DIR="${LOCAL_CERTS_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)/certs-local}"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CHALLENGE_DIR="${CHALLENGE_DIR:-$PROJECT_ROOT/.well-known/acme-challenge}"
 CERTBOT_BIN="${CERTBOT_BIN:-certbot}"
+CERTBOT_USE_SUDO="${CERTBOT_USE_SUDO:-false}"
+CERTBOT_CONFIG_DIR="${CERTBOT_CONFIG_DIR:-$LOCAL_CERTS_DIR/letsencrypt}"
+CERTBOT_WORK_DIR="${CERTBOT_WORK_DIR:-$LOCAL_CERTS_DIR/work}"
+CERTBOT_LOGS_DIR="${CERTBOT_LOGS_DIR:-$LOCAL_CERTS_DIR/logs}"
+CERTBOT_LIVE_DIR="${CERTBOT_LIVE_DIR:-$CERTBOT_CONFIG_DIR/live}"
 
-MODE="${1:-renew}"
+MODE="${1:-auto}"
 
 check_certbot() {
   if command -v "$CERTBOT_BIN" >/dev/null 2>&1; then
@@ -42,15 +48,29 @@ check_certbot() {
   exit 1
 }
 
-issue_certificate() {
-  mkdir -p "$CHALLENGE_DIR"
+certbot_exec() {
+  if [[ "$CERTBOT_USE_SUDO" == "true" ]]; then
+    sudo "$CERTBOT_BIN" "$@"
+  else
+    "$CERTBOT_BIN" "$@"
+  fi
+}
 
-  sudo "$CERTBOT_BIN" certonly \
+prepare_certbot_dirs() {
+  mkdir -p "$CERTBOT_CONFIG_DIR" "$CERTBOT_WORK_DIR" "$CERTBOT_LOGS_DIR" "$CHALLENGE_DIR"
+}
+
+issue_certificate() {
+  prepare_certbot_dirs
+
+  certbot_exec certonly \
     --manual \
     --preferred-challenges http \
-    --manual-public-ip-logging-ok \
     --manual-auth-hook "$SCRIPT_DIR/certbot-write-challenge.sh" \
     --manual-cleanup-hook "$SCRIPT_DIR/certbot-cleanup-challenge.sh" \
+    --config-dir "$CERTBOT_CONFIG_DIR" \
+    --work-dir "$CERTBOT_WORK_DIR" \
+    --logs-dir "$CERTBOT_LOGS_DIR" \
     -d "$PRIMARY_DOMAIN" -d "$SECONDARY_DOMAIN" \
     --agree-tos \
     --email "$EMAIL" \
@@ -58,17 +78,41 @@ issue_certificate() {
 }
 
 renew_certificate() {
-  sudo "$CERTBOT_BIN" renew
+  prepare_certbot_dirs
+
+  certbot_exec renew \
+    --config-dir "$CERTBOT_CONFIG_DIR" \
+    --work-dir "$CERTBOT_WORK_DIR" \
+    --logs-dir "$CERTBOT_LOGS_DIR"
 }
 
 dry_run_renewal() {
-  sudo "$CERTBOT_BIN" renew --dry-run
+  prepare_certbot_dirs
+
+  certbot_exec renew --dry-run \
+    --config-dir "$CERTBOT_CONFIG_DIR" \
+    --work-dir "$CERTBOT_WORK_DIR" \
+    --logs-dir "$CERTBOT_LOGS_DIR"
 }
 
 check_certbot
 
+resolve_mode() {
+  if [[ "$MODE" != "auto" ]]; then
+    return 0
+  fi
+
+  if [[ -f "$CERTBOT_LIVE_DIR/$PRIMARY_DOMAIN/fullchain.pem" && -f "$CERTBOT_LIVE_DIR/$PRIMARY_DOMAIN/privkey.pem" ]]; then
+    MODE="renew"
+  else
+    MODE="issue"
+  fi
+
+  echo "Auto mode selected: $MODE"
+}
+
 save_local_copy() {
-  local source_dir="/etc/letsencrypt/live/$PRIMARY_DOMAIN"
+  local source_dir="$CERTBOT_LIVE_DIR/$PRIMARY_DOMAIN"
   local target_dir="$LOCAL_CERTS_DIR/$PRIMARY_DOMAIN/$(date +%F)"
 
   if [[ ! -f "$source_dir/fullchain.pem" || ! -f "$source_dir/privkey.pem" ]]; then
@@ -77,13 +121,14 @@ save_local_copy() {
   fi
 
   mkdir -p "$target_dir"
-  sudo cp "$source_dir/fullchain.pem" "$target_dir/fullchain.pem"
-  sudo cp "$source_dir/privkey.pem" "$target_dir/privkey.pem"
-  sudo chown "$USER":"$USER" "$target_dir/fullchain.pem" "$target_dir/privkey.pem"
+  cp "$source_dir/fullchain.pem" "$target_dir/fullchain.pem"
+  cp "$source_dir/privkey.pem" "$target_dir/privkey.pem"
   chmod 600 "$target_dir/privkey.pem"
 
   echo "Local backup saved to: $target_dir"
 }
+
+resolve_mode
 
 case "$MODE" in
   issue)

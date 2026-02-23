@@ -1,0 +1,6 @@
+{
+  "name": "meubusao/site",
+  "description": "Static site wrapper for Heroku PHP buildpack",
+  "type": "project",
+  "require": {}
+}

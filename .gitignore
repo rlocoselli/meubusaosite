@@ -4,3 +4,4 @@ certs-local/
 # Optional local env files
 .env
 .env.*
+.venv-certbot/
