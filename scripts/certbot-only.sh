@@ -19,7 +19,7 @@ fi
 
 EMAIL="${EMAIL:-rlocoselli@yahoo.com.br}"
 PRIMARY_DOMAIN="${PRIMARY_DOMAIN:-www.meubusao.com}"
-SECONDARY_DOMAIN="${SECONDARY_DOMAIN:-meubusao.com}"
+SECONDARY_DOMAIN="${SECONDARY_DOMAIN:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_CERTS_DIR="${LOCAL_CERTS_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)/certs-local}"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -72,6 +72,10 @@ prepare_certbot_dirs() {
 
 issue_certificate() {
   prepare_certbot_dirs
+  local domain_args=( -d "$PRIMARY_DOMAIN" )
+  if [[ -n "$SECONDARY_DOMAIN" ]]; then
+    domain_args+=( -d "$SECONDARY_DOMAIN" )
+  fi
 
   if [[ "$ISSUE_MODE" == "interactive" ]]; then
     certbot_exec certonly \
@@ -80,7 +84,7 @@ issue_certificate() {
       --config-dir "$CERTBOT_CONFIG_DIR" \
       --work-dir "$CERTBOT_WORK_DIR" \
       --logs-dir "$CERTBOT_LOGS_DIR" \
-      -d "$PRIMARY_DOMAIN" -d "$SECONDARY_DOMAIN" \
+      "${domain_args[@]}" \
       --agree-tos \
       --email "$EMAIL"
   else
@@ -92,7 +96,7 @@ issue_certificate() {
       --config-dir "$CERTBOT_CONFIG_DIR" \
       --work-dir "$CERTBOT_WORK_DIR" \
       --logs-dir "$CERTBOT_LOGS_DIR" \
-      -d "$PRIMARY_DOMAIN" -d "$SECONDARY_DOMAIN" \
+      "${domain_args[@]}" \
       --agree-tos \
       --email "$EMAIL" \
       --non-interactive
