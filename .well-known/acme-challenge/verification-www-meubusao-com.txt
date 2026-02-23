@@ -1,0 +1,8 @@
+Domain verification file for Let's Encrypt HTTP-01 challenge
+Domain: www.meubusao.com
+Repository: rlocoselli/meubusaosite
+Date: 2026-02-23
+
+If this file is reachable at:
+https://www.meubusao.com/.well-known/acme-challenge/verification-www-meubusao-com.txt
+then webroot publishing is correctly configured for HTTP validation.

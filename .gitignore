@@ -1,0 +1,6 @@
+# Local TLS certificates (never commit)
+certs-local/
+
+# Optional local env files
+.env
+.env.*
