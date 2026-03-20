@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Certbot-only helper for www.meubusao.com
+# Certbot-only helper for www.meubusao.com + meubusao.com
 # Usage:
 #   ./scripts/certbot-only.sh issue
 #   ./scripts/certbot-only.sh renew
@@ -19,7 +19,12 @@ fi
 
 EMAIL="${EMAIL:-rlocoselli@yahoo.com.br}"
 PRIMARY_DOMAIN="${PRIMARY_DOMAIN:-www.meubusao.com}"
-SECONDARY_DOMAIN="${SECONDARY_DOMAIN:-}"
+if [[ "$PRIMARY_DOMAIN" == www.* ]]; then
+  DEFAULT_SECONDARY_DOMAIN="${PRIMARY_DOMAIN#www.}"
+else
+  DEFAULT_SECONDARY_DOMAIN=""
+fi
+SECONDARY_DOMAIN="${SECONDARY_DOMAIN:-$DEFAULT_SECONDARY_DOMAIN}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_CERTS_DIR="${LOCAL_CERTS_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)/certs-local}"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
