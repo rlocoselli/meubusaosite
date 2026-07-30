@@ -1,5 +1,5 @@
 # app-ads.txt for meubusao.com
-# Mon Bus - Grenoble - Tag
+# Authorized seller for Meu Busao transport apps
 # Last update: 2026-07-30
 
 google.com,pub-6158185990205930,DIRECT,f08c47fec0942fa0
