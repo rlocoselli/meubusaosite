@@ -1,28 +1,5 @@
-# app-ads.txt for www.meubusao.com
-# Last update: 2026-03-20
-# Keep only authorized sellers to protect revenue quality.
+# app-ads.txt for meubusao.com
+# Mon Bus - Grenoble - Tag
+# Last update: 2026-07-30
 
-yodo1.com,6204c210982aec38745c797b,DIRECT
-
-google.com,pub-8309773808661346,RESELLER,f08c47fec0942fa0
 google.com,pub-6158185990205930,DIRECT,f08c47fec0942fa0
-
-pubmatic.com,166335,RESELLER,5d62403b186f2ace
-pubmatic.com,167188,RESELLER,5d62403b186f2ace
-rubiconproject.com,27538,RESELLER,0bfd66d529a55807
-rubiconproject.com,27931,RESELLER,0bfd66d529a55807
-sharethrough.com,4343,RESELLER,d53b998a7bd4ecd2
-sharethrough.com,4610,RESELLER,d53b998a7bd4ecd2
-smaato.com,1100056087,RESELLER,07bcf65f187117b4
-smaato.com,1100058938,RESELLER,07bcf65f187117b4
-smaato.com,1100059476,RESELLER,07bcf65f187117b4
-themediagrid.com,NC7LXT,RESELLER,35d5010d7789b49d
-freewheel.tv,534608-r-523319,RESELLER
-video.unrulymedia.com,290726769,RESELLER
-toponad.com,16513d1e193a2a,RESELLER,1d49fe424a1a456d
-bluexad.ai,1945022290496327680,RESELLER
-bluexad.ai,1946100279346728960,RESELLER
-bold-win.com,1131,RESELLER,71746737d0bab951
-bold-win.com,1139,RESELLER,71746737d0bab951
-bidmachine.io,258,RESELLER
-33across.com,001Pg0000197KcKIAU,RESELLER,bbea06d9c4d2853c
