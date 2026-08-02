@@ -11,6 +11,7 @@ from functools import lru_cache
 
 import requests
 from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from page_content import PUBLIC_PAGES
 
 
 app = Flask(__name__)
@@ -191,6 +192,26 @@ def team_page():
     members = [{**member, "role": PAGE_CONTENT[current_lang()]["roles"][index]} for index, member in enumerate(TEAM)]
     return render_template("team.html", members=members)
 
+@app.get("/about.html")
+def about_page():
+    return render_template("public/about.html", page=PUBLIC_PAGES[current_lang()]["about"])
+
+@app.get("/faqs.html")
+def faq_page():
+    return render_template("public/faq.html", page=PUBLIC_PAGES[current_lang()]["faq"])
+
+@app.get("/contacts.html")
+def contact_page():
+    return render_template("public/contact.html", page=PUBLIC_PAGES[current_lang()]["contact"])
+
+@app.get("/terms.html")
+def terms_page():
+    return render_template("public/legal.html", page=PUBLIC_PAGES[current_lang()]["terms"])
+
+@app.get("/privacy.html")
+def privacy_page():
+    return render_template("public/legal.html", page=PUBLIC_PAGES[current_lang()]["privacy"])
+
 @app.get("/city/<city_id>")
 def city(city_id):
     city_info = CITIES.get(city_id)
@@ -259,7 +280,16 @@ def stop_details(city_id, stop_id):
 def health():
     return {"status": "ok", "api_configured": bool(API_LOGIN_ID), "api_authenticated": bool(_auth["token"] and time.time() < _auth["expires_at"])}
 
-LEGACY_PAGES = {"about.html", "faqs.html", "contacts.html", "terms.html", "privacy.html", "app-ads.txt"}
+LEGACY_PAGES = {"app-ads.txt"}
+
+RETIRED_DEMO_PAGES = {"blog-listing.html", "download.html", "features.html", "pricing.html", "project-details.html", "projects.html", "single-post.html"}
+
+@app.get("/<page>.html")
+def retired_demo_page(page):
+    filename = f"{page}.html"
+    if filename not in RETIRED_DEMO_PAGES:
+        abort(404)
+    return redirect(url_for("home"), code=301)
 
 @app.get("/<folder>/<path:filename>")
 def legacy_asset(folder, filename):
@@ -272,6 +302,10 @@ def legacy_page(page):
     if page not in LEGACY_PAGES:
         abort(404)
     return send_from_directory(app.root_path, page)
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template("404.html"), 404
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=os.environ.get("FLASK_DEBUG") == "1")
