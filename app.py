@@ -65,6 +65,13 @@ PAGE_CONTENT = {
     "es": {"testimonials_kicker":"Historias reales", "testimonials_title":"Quienes lo usan, lo recomiendan", "testimonials_text":"Opiniones de pasajeros que utilizan Meu Busão para organizar mejor sus recorridos.", "reviews":[("Muy útil. Ayuda mucho a elegir el itinerario adecuado.", "M. Reis", "Brasil"), ("Excelente, bien explicado y muy detallado. Recomendado para Managua, Nicaragua.", "Sr. Herrera", "Managua"), ("Una gran aplicación de horarios de autobús en Managua. Funciona muy bien.", "Sr. Perez", "Managua")], "team_kicker":"Las personas detrás de las rutas", "team_title":"Un pequeño equipo con una misión en movimiento", "team_intro":"Creamos herramientas sencillas a partir de datos abiertos para que el transporte público sea más comprensible y accesible.", "team_story_title":"Tecnología que nació en la parada", "team_story":"Meu Busão nació de una necesidad cotidiana: saber qué autobús tomar y cuándo llegaría. Unimos desarrollo, ingeniería y análisis de datos para convertir complejos datos GTFS en una experiencia clara para cada ciudad.", "team_value_1":"Datos abiertos", "team_value_1_text":"Convertimos datos públicos de movilidad en información útil.", "team_value_2":"Acceso para todos", "team_value_2_text":"El servicio es gratuito, inclusivo y está disponible en varios idiomas.", "team_value_3":"Creado con cuidado", "team_value_3_text":"Mapas, horarios e interfaces pensados para la vida real.", "join_title":"¿Quieres ayudar a mejorar la movilidad?", "join_text":"Contáctanos para hablar de datos, nuevas ciudades, traducciones o colaboración.", "join_button":"Contactar", "roles":["Usuario de autobús y desarrollador", "Ingeniero de software", "Analista de datos"]},
 }
 
+MAP_COPY = {
+    "pt-br": {"stop_details":"Detalhes da parada", "lines_here":"Linhas nesta parada", "upcoming":"Próximos ônibus", "getting_there":"Como chegar", "directions_text":"Abra uma rota de transporte público da sua localização até esta parada.", "open_directions":"Criar rota", "loading":"Carregando informações…", "close":"Fechar", "minutes":"min", "scheduled":"Horário previsto", "location_error":"Não foi possível obter sua localização. Abriremos a rota usando seu ponto de partida escolhido no mapa."},
+    "fr": {"stop_details":"Détails de l’arrêt", "lines_here":"Lignes à cet arrêt", "upcoming":"Prochains bus", "getting_there":"Comment s’y rendre", "directions_text":"Ouvrez un itinéraire en transports publics depuis votre position jusqu’à cet arrêt.", "open_directions":"Créer l’itinéraire", "loading":"Chargement des informations…", "close":"Fermer", "minutes":"min", "scheduled":"Horaire prévu", "location_error":"Votre position n’est pas disponible. Choisissez votre point de départ sur la carte."},
+    "it": {"stop_details":"Dettagli fermata", "lines_here":"Linee a questa fermata", "upcoming":"Prossimi autobus", "getting_there":"Come arrivare", "directions_text":"Apri un percorso con il trasporto pubblico dalla tua posizione a questa fermata.", "open_directions":"Crea percorso", "loading":"Caricamento informazioni…", "close":"Chiudi", "minutes":"min", "scheduled":"Orario previsto", "location_error":"Posizione non disponibile. Scegli il punto di partenza sulla mappa."},
+    "es": {"stop_details":"Detalles de la parada", "lines_here":"Líneas en esta parada", "upcoming":"Próximos autobuses", "getting_there":"Cómo llegar", "directions_text":"Abre una ruta en transporte público desde tu ubicación hasta esta parada.", "open_directions":"Crear ruta", "loading":"Cargando información…", "close":"Cerrar", "minutes":"min", "scheduled":"Horario previsto", "location_error":"No pudimos obtener tu ubicación. Elige el punto de partida en el mapa."},
+}
+
 TEAM = [
     {"name": "Rodrigo Locoselli", "photo": "/images/rodrigo.jpg"},
     {"name": "Pedro Marcondes", "photo": "/images/pedro.jpg"},
@@ -76,7 +83,7 @@ def current_lang():
     return lang if lang in LANGUAGES else "pt-br"
 
 def tr(key):
-    return COPY[current_lang()].get(key, LEGAL_COPY[current_lang()].get(key, key))
+    return COPY[current_lang()].get(key, LEGAL_COPY[current_lang()].get(key, MAP_COPY[current_lang()].get(key, key)))
 
 def api_get(path, params=None):
     cache_key = path + repr(sorted((params or {}).items()))
@@ -235,6 +242,18 @@ def departures(city_id):
     if not stop_id: return jsonify({"items": [], "error": "stop_required"}), 400
     data = api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": request.args.get("date", date.today().isoformat()), "limit": 12})
     return jsonify({"items": rows(data), "connected": bool(data is not None)})
+
+@app.get("/api/<city_id>/stop/<path:stop_id>")
+def stop_details(city_id, stop_id):
+    if city_id not in CITIES:
+        abort(404)
+    routes_data = rows(api_get(f"getRouteByStopId/{city_id}/{stop_id}"))
+    departures_data = rows(api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": date.today().isoformat(), "limit": 8}))
+    return jsonify({
+        "routes": [route_view(item) for item in routes_data],
+        "departures": departures_data,
+        "connected": bool(routes_data or departures_data),
+    })
 
 @app.get("/health")
 def health():
