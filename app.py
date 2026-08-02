@@ -6,11 +6,14 @@ from datetime import date
 from functools import lru_cache
 
 import requests
-from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-change-me")
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+if os.environ.get("FLASK_ENV") == "production":
+    app.config["SESSION_COOKIE_SECURE"] = True
 API_BASE = os.environ.get("MEUBUSAO_API_URL", "https://mybusaoservice.audeladedonnees.fr").rstrip("/")
 API_TOKEN = os.environ.get("MEUBUSAO_API_TOKEN", "")
 LANGUAGES = ("pt-br", "fr", "it", "es")
@@ -40,12 +43,19 @@ COPY = {
 
 _cache: dict[str, tuple[float, object]] = {}
 
+LEGAL_COPY = {
+    "pt-br": {"nav_more":"Mais", "about":"Sobre", "team":"Equipe", "faq":"Perguntas frequentes", "contact":"Contato", "terms":"Termos", "privacy":"Privacidade", "cookies":"Cookies", "cookie_title":"Sua privacidade, sua escolha", "cookie_text":"Usamos armazenamento essencial para lembrar o idioma e suas preferências. Recursos opcionais só serão ativados com sua autorização.", "cookie_accept":"Aceitar todos", "cookie_reject":"Somente essenciais", "cookie_settings":"Personalizar", "cookie_save":"Salvar escolhas", "cookie_essential":"Essenciais", "cookie_essential_info":"Necessários para idioma, segurança e funcionamento do site. Sempre ativos.", "cookie_optional":"Experiência externa", "cookie_optional_info":"Permite mapas e outros conteúdos fornecidos por serviços externos."},
+    "fr": {"nav_more":"Plus", "about":"À propos", "team":"Équipe", "faq":"FAQ", "contact":"Contact", "terms":"Conditions", "privacy":"Confidentialité", "cookies":"Cookies", "cookie_title":"Votre vie privée, votre choix", "cookie_text":"Nous utilisons le stockage essentiel pour mémoriser la langue et vos préférences. Les fonctionnalités optionnelles ne sont activées qu’avec votre accord.", "cookie_accept":"Tout accepter", "cookie_reject":"Essentiels uniquement", "cookie_settings":"Personnaliser", "cookie_save":"Enregistrer mes choix", "cookie_essential":"Essentiels", "cookie_essential_info":"Nécessaires à la langue, la sécurité et au fonctionnement du site. Toujours actifs.", "cookie_optional":"Expérience externe", "cookie_optional_info":"Autorise les cartes et autres contenus fournis par des services externes."},
+    "it": {"nav_more":"Altro", "about":"Chi siamo", "team":"Team", "faq":"Domande frequenti", "contact":"Contatti", "terms":"Termini", "privacy":"Privacy", "cookies":"Cookie", "cookie_title":"La tua privacy, la tua scelta", "cookie_text":"Usiamo lo spazio di archiviazione essenziale per ricordare lingua e preferenze. Le funzioni opzionali vengono attivate solo con il tuo consenso.", "cookie_accept":"Accetta tutto", "cookie_reject":"Solo essenziali", "cookie_settings":"Personalizza", "cookie_save":"Salva le scelte", "cookie_essential":"Essenziali", "cookie_essential_info":"Necessari per lingua, sicurezza e funzionamento del sito. Sempre attivi.", "cookie_optional":"Esperienza esterna", "cookie_optional_info":"Consente mappe e altri contenuti forniti da servizi esterni."},
+    "es": {"nav_more":"Más", "about":"Acerca de", "team":"Equipo", "faq":"Preguntas frecuentes", "contact":"Contacto", "terms":"Términos", "privacy":"Privacidad", "cookies":"Cookies", "cookie_title":"Tu privacidad, tu elección", "cookie_text":"Usamos almacenamiento esencial para recordar el idioma y tus preferencias. Las funciones opcionales solo se activan con tu consentimiento.", "cookie_accept":"Aceptar todo", "cookie_reject":"Solo esenciales", "cookie_settings":"Personalizar", "cookie_save":"Guardar opciones", "cookie_essential":"Esenciales", "cookie_essential_info":"Necesarios para el idioma, la seguridad y el funcionamiento del sitio. Siempre activos.", "cookie_optional":"Experiencia externa", "cookie_optional_info":"Permite mapas y otros contenidos proporcionados por servicios externos."},
+}
+
 def current_lang():
     lang = session.get("lang", "pt-br")
     return lang if lang in LANGUAGES else "pt-br"
 
 def tr(key):
-    return COPY[current_lang()].get(key, key)
+    return COPY[current_lang()].get(key, LEGAL_COPY[current_lang()].get(key, key))
 
 def api_get(path, params=None):
     if not API_TOKEN:
@@ -123,6 +133,20 @@ def departures(city_id):
 @app.get("/health")
 def health():
     return {"status": "ok", "api_configured": bool(API_TOKEN)}
+
+LEGACY_PAGES = {"about.html", "team.html", "faqs.html", "contacts.html", "terms.html", "privacy.html", "app-ads.txt"}
+
+@app.get("/<folder>/<path:filename>")
+def legacy_asset(folder, filename):
+    if folder not in {"css", "js", "images", "fonts"}:
+        abort(404)
+    return send_from_directory(os.path.join(app.root_path, folder), filename, max_age=86400)
+
+@app.get("/<path:page>")
+def legacy_page(page):
+    if page not in LEGACY_PAGES:
+        abort(404)
+    return send_from_directory(app.root_path, page)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=os.environ.get("FLASK_DEBUG") == "1")

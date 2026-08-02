@@ -5,3 +5,16 @@ function initCityMap(lat,lon,name){const el=document.getElementById('cityMap');i
 function initLineMap(lat,lon,color){const el=document.getElementById('lineMap');if(!el)return;const map=L.map(el).setView([lat,lon],12);tile(map);let shape=parseData('shapeData').map(coords).filter(Boolean);let stops=parseData('lineStops');let located=stops.map(s=>({stop:s,point:coords(s)})).filter(x=>x.point);if(shape.length)L.polyline(shape,{color,weight:6,opacity:.9}).addTo(map);located.forEach(x=>L.circleMarker(x.point,{radius:6,color,weight:4,fillColor:'#fff',fillOpacity:1}).bindPopup(x.stop.stop_name||x.stop.stopName||'Stop').addTo(map));const all=shape.length?shape:located.map(x=>x.point);if(all.length)map.fitBounds(all,{padding:[40,40]})}
 document.getElementById('routeSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.route-row').forEach(r=>r.hidden=!r.dataset.search.includes(q))});
 document.getElementById('departuresForm')?.addEventListener('submit',async e=>{e.preventDefault();const form=e.currentTarget,out=document.getElementById('departureResults'),data=new FormData(form);out.innerHTML='<div class="empty">•••</div>';try{const qs=new URLSearchParams(data);const res=await fetch(`/api/${form.dataset.city}/departures?${qs}`);const json=await res.json();out.innerHTML=(json.items||[]).map(d=>`<div class="departure-item"><span>${d.route_short_name||d.routeShortName||d.route_id||'Bus'}</span><b>${d.departure_time||d.departureTime||d.time||'—'}</b><span>${d.trip_headsign||d.headsign||d.stop_name||''}</span></div>`).join('')||'<div class="empty">No departures found</div>'}catch(err){out.innerHTML='<div class="empty">Service temporarily unavailable</div>'}});
+
+const consentKey='meubusao-consent-v1';
+const cookieBanner=document.getElementById('cookieBanner');
+const cookieOptions=document.getElementById('cookieOptions');
+const cookieSave=document.getElementById('cookieSave');
+const cookieCustomize=document.getElementById('cookieCustomize');
+function saveConsent(optional){localStorage.setItem(consentKey,JSON.stringify({essential:true,optional,updated:new Date().toISOString()}));cookieBanner.hidden=true;document.documentElement.dataset.externalConsent=optional?'granted':'denied'}
+function openCookieSettings(){cookieBanner.hidden=false;cookieOptions.hidden=false;cookieSave.hidden=false;cookieCustomize.hidden=true;const saved=JSON.parse(localStorage.getItem(consentKey)||'{}');document.getElementById('optionalCookies').checked=Boolean(saved.optional)}
+try{const saved=JSON.parse(localStorage.getItem(consentKey)||'null');if(!saved)cookieBanner.hidden=false;else document.documentElement.dataset.externalConsent=saved.optional?'granted':'denied'}catch(e){cookieBanner.hidden=false}
+document.querySelectorAll('[data-consent]').forEach(button=>button.addEventListener('click',()=>saveConsent(button.dataset.consent==='all')));
+cookieCustomize?.addEventListener('click',openCookieSettings);
+cookieSave?.addEventListener('click',()=>saveConsent(document.getElementById('optionalCookies').checked));
+document.querySelectorAll('[data-cookie-settings]').forEach(button=>button.addEventListener('click',openCookieSettings));
