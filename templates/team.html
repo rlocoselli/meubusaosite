@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block title %}{{ t('team') }} · Meu Busão{% endblock %}
+{% block content %}
+<section class="team-hero"><div class="team-hero-copy"><p class="eyebrow"><span></span>{{ content.team_kicker }}</p><h1>{{ content.team_title }}</h1><p>{{ content.team_intro }}</p></div><div class="team-orbit" aria-hidden="true"><div class="orbit-line"></div><span class="orbit-bus">▰</span><i></i><i></i><i></i></div></section>
+<section class="team-section"><div class="team-intro"><p class="eyebrow dark"><span></span>Meu Busão</p><h2>{{ content.team_story_title }}</h2><p>{{ content.team_story }}</p></div><div class="member-grid">{% for member in members %}<article class="member-card"><div class="member-photo"><img src="{{ member.photo }}" alt="{{ member.name }}" loading="lazy"><span>0{{ loop.index }}</span></div><div class="member-info"><h3>{{ member.name }}</h3><p>{{ member.role }}</p></div></article>{% endfor %}</div></section>
+<section class="values"><article><b>01</b><h3>{{ content.team_value_1 }}</h3><p>{{ content.team_value_1_text }}</p></article><article><b>02</b><h3>{{ content.team_value_2 }}</h3><p>{{ content.team_value_2_text }}</p></article><article><b>03</b><h3>{{ content.team_value_3 }}</h3><p>{{ content.team_value_3_text }}</p></article></section>
+<section class="team-cta"><div><h2>{{ content.join_title }}</h2><p>{{ content.join_text }}</p></div><a class="btn lime" href="/contacts.html">{{ content.join_button }} →</a></section>
+{% endblock %}

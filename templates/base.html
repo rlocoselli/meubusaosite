@@ -14,7 +14,7 @@
 <body>
   <header class="topbar">
     <a class="brand" href="{{ url_for('home') }}"><span class="brand-mark">M</span><span>Meu Busão</span></a>
-    <nav><a href="{{ url_for('home') }}#cities">{{ t('nav_cities') }}</a><a href="{{ url_for('home') }}#planner">{{ t('nav_plan') }}</a><div class="nav-more"><button>{{ t('nav_more') }} ⌄</button><div><a href="/about.html">{{ t('about') }}</a><a href="/team.html">{{ t('team') }}</a><a href="/faqs.html">{{ t('faq') }}</a><a href="/contacts.html">{{ t('contact') }}</a><a href="/terms.html">{{ t('terms') }}</a><a href="/privacy.html">{{ t('privacy') }}</a></div></div><a href="{{ api_docs }}" target="_blank" rel="noopener">{{ t('nav_docs') }} ↗</a></nav>
+    <nav><a href="{{ url_for('home') }}#cities">{{ t('nav_cities') }}</a><a href="{{ url_for('home') }}#planner">{{ t('nav_plan') }}</a><div class="nav-more"><button>{{ t('nav_more') }} ⌄</button><div><a href="/about.html">{{ t('about') }}</a><a href="{{ url_for('team_page') }}">{{ t('team') }}</a><a href="/faqs.html">{{ t('faq') }}</a><a href="/contacts.html">{{ t('contact') }}</a><a href="/terms.html">{{ t('terms') }}</a><a href="/privacy.html">{{ t('privacy') }}</a></div></div><a href="{{ api_docs }}" target="_blank" rel="noopener">{{ t('nav_docs') }} ↗</a></nav>
     <div class="lang-switch" aria-label="Language">{% for code in languages %}<a class="{{ 'active' if code == lang }}" href="{{ url_for('set_language', lang=code) }}">{{ {'pt-br':'PT','fr':'FR','it':'IT','es':'ES'}[code] }}</a>{% endfor %}</div>
   </header>
   <main>{% block content %}{% endblock %}</main>
