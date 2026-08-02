@@ -198,11 +198,35 @@ def line(city_id, route_id):
     if not city_info: abort(404)
     all_routes = [route_view(x) for x in rows(api_get(f"getRoutes/{city_id}"))]
     route = next((x for x in all_routes if x["id"] == route_id), {"id": route_id, "short": route_id, "name": "", "color": city_info["accent"], "text_color": "#ffffff"})
-    trips = rows(api_get(f"getTrips/{city_id}/{route_id}"))
-    trip_id = str((trips[0] if trips else {}).get("trip_id", (trips[0] if trips else {}).get("tripId", "")))
-    stops = rows(api_get(f"getStopsByTrip/{city_id}/{trip_id}")) if trip_id else []
-    shape = rows(api_get(f"getShapeByTripId/{city_id}", {"tripId": trip_id})) if trip_id else []
-    return render_template("line.html", city_id=city_id, city=city_info, route=route, stops=stops, shape=shape)
+    direction_rows = rows(api_get(f"getDirectionByRoute/{city_id}/{route_id}"))
+    directions = []
+    for item in direction_rows:
+        value = item.get("trip_headsign", item.get("tripHeadsign", item.get("direction", "")))
+        if value and value not in directions:
+            directions.append(str(value))
+    selected_direction = request.args.get("direction", "").strip()
+    if selected_direction not in directions:
+        selected_direction = directions[0] if directions else ""
+
+    weekday = date.today().strftime("%A").lower()
+    stop_params = {"direction": selected_direction} if selected_direction else None
+    stops = rows(api_get(f"getStopsByRouteAndDirection/{city_id}/{weekday}/{route_id}", stop_params))
+    if not stops and selected_direction:
+        stops = rows(api_get(f"getStopsByRouteAndDirection/{city_id}/{weekday}/{route_id}"))
+
+    shape_id = ""
+    for stop in stops:
+        shape_id = str(stop.get("shape_id", stop.get("shapeId", "")) or "")
+        if shape_id:
+            break
+    shape = rows(api_get(f"getShapeById/{city_id}", {"shapeId": shape_id})) if shape_id else []
+
+    if not stops:
+        trips = rows(api_get(f"getTrips/{city_id}/{route_id}"))
+        trip_id = str((trips[0] if trips else {}).get("trip_id", (trips[0] if trips else {}).get("tripId", "")))
+        stops = rows(api_get(f"getStopsByTrip/{city_id}/{trip_id}")) if trip_id else []
+        shape = rows(api_get(f"getShapeByTripId/{city_id}", {"tripId": trip_id})) if trip_id else []
+    return render_template("line.html", city_id=city_id, city=city_info, route=route, stops=stops, shape=shape, directions=directions, selected_direction=selected_direction)
 
 @app.get("/api/<city_id>/departures")
 def departures(city_id):
