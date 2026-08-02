@@ -1,7 +1,4 @@
-# Local TLS certificates (never commit)
-certs-local/
-
-# Optional local env files
+.venv/
+__pycache__/
+*.py[cod]
 .env
-.env.*
-.venv-certbot/

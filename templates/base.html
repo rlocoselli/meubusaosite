@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#081c2c"><meta name="description" content="Meu Busão — lines, stops, maps and public transport timetables.">
+  <title>{% block title %}Meu Busão{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2226%22 fill=%22%23d9ff43%22/><text x=%2250%22 y=%2268%22 text-anchor=%22middle%22 font-size=%2262%22 font-family=%22sans-serif%22 font-weight=%22800%22 fill=%22%23071b2b%22>M</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home') }}"><span class="brand-mark">M</span><span>Meu Busão</span></a>
+    <nav><a href="{{ url_for('home') }}#cities">{{ t('nav_cities') }}</a><a href="{{ url_for('home') }}#planner">{{ t('nav_plan') }}</a><a href="{{ api_docs }}" target="_blank" rel="noopener">{{ t('nav_docs') }} ↗</a></nav>
+    <div class="lang-switch" aria-label="Language">{% for code in languages %}<a class="{{ 'active' if code == lang }}" href="{{ url_for('set_language', lang=code) }}">{{ {'pt-br':'PT','fr':'FR','it':'IT','es':'ES'}[code] }}</a>{% endfor %}</div>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+  <footer><a class="brand" href="/"><span class="brand-mark">M</span><span>Meu Busão</span></a><p>Open transit, beautifully presented.</p><a href="{{ api_docs }}" target="_blank">{{ t('nav_docs') }} ↗</a></footer>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

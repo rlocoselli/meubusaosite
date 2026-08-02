@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="hero">
+  <div class="orb orb-a"></div><div class="orb orb-b"></div>
+  <div class="hero-copy"><p class="eyebrow"><span></span>{{ t('hero_kicker') }}</p><h1>{{ t('hero_title') }}</h1><p class="lead">{{ t('hero_text') }}</p><div class="actions"><a class="btn primary" href="#cities">{{ t('explore') }} <b>↓</b></a><a class="btn ghost" href="#planner">{{ t('plan') }}</a></div>
+  <div class="hero-stats"><span><b>13</b>{{ t('hero_stat_cities') }}</span><span><b>4</b>{{ t('hero_stat_languages') }}</span><span><b>∞</b>{{ t('hero_stat_access') }}</span></div></div>
+  <div class="hero-visual"><div class="route-card floating"><small>LINHA / LIGNE</small><strong>12</strong><p>Centro <span>→</span> Estação</p><div class="mini-route"><i></i><i></i><i></i><i></i></div></div><div class="phone"><div class="phone-top"></div><div class="phone-map"></div><div class="phone-sheet"><em>Next bus</em><b>4 min</b><span>Central Station · Platform 2</span></div></div><div class="arrival floating"><span class="pulse"></span><div><small>LIVE</small><b>2 min</b></div></div></div>
+</section>
+<section id="cities" class="section cities-section"><div class="section-heading"><div><p class="eyebrow dark"><span></span>{{ t('network') }}</p><h2>{{ t('cities_title') }}</h2></div><p>{{ t('cities_text') }}</p></div>
+<div class="city-grid">{% for city_id, city in cities.items() %}<a href="{{ url_for('city', city_id=city_id) }}" class="city-card {{ 'wide' if loop.index in [1,8] }}" style="--city-accent:{{ city.accent }};background-image:linear-gradient(180deg,transparent 18%,rgba(4,19,30,.88) 100%),url('{{ city.photo }}')"><div class="city-country">{{ city.country }}</div><div class="city-info"><h3>{{ city.name }}</h3><p>{{ t('open_city') }}</p></div><span class="round-arrow">↗</span></a>{% endfor %}</div></section>
+<section id="planner" class="planner"><div><p class="eyebrow"><span></span>{{ t('timetable') }}</p><h2>{{ t('hero_title') }}</h2></div><form action="#cities"><select onchange="if(this.value) location.href=this.value"><option value="">{{ t('cities_title') }}</option>{% for city_id, city in cities.items() %}<option value="{{ url_for('city', city_id=city_id) }}">{{ city.name }} — {{ city.country }}</option>{% endfor %}</select><button class="btn lime" type="submit">{{ t('explore') }} →</button></form></section>
+{% endblock %}
