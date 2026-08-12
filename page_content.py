@@ -48,25 +48,25 @@ PRIVACY_APP_IDENTITY = {
         "title": "Política de Privacidade — Bus - Monopoli",
         "intro": "Como tratamos dados e protegemos suas escolhas ao usar os aplicativos Bus - Monopoli e Mon Bus - Grenoble - Tag.",
         "updated": "Atualizado em 12 de agosto de 2026",
-        "section": ("1. Aplicativos, desenvolvedor e responsável legal", "Esta Política de Privacidade se aplica aos aplicativos Bus - Monopoli e Mon Bus - Grenoble - Tag, ambos publicados no Google Play com o nome de desenvolvedor Rodrigo Locoselli. A pessoa física responsável legal, operadora dos aplicativos e controladora de dados é Rodrigo Locoselli Gutierres, situada em 16 Rue Nicolas Chorier, 38000 Grenoble, França. Contato: locoselli2016@gmail.com."),
+        "section": ("1. Aplicativos, desenvolvedor e responsável legal", "Esta Política de Privacidade se aplica aos aplicativos Bus - Monopoli e Mon Bus - Grenoble - Tag, ambos publicados no Google Play com o nome de desenvolvedor Rodrigo Locoselli. A pessoa física responsável legal, operadora dos aplicativos e controladora de dados é Rodrigo Locoselli Gutierres, situada em Grenoble, França. Contato: locoselli2016@gmail.com."),
     },
     "fr": {
         "title": "Politique de confidentialité — Bus - Monopoli",
         "intro": "Comment nous traitons les données lors de l’utilisation des applications Bus - Monopoli et Mon Bus - Grenoble - Tag.",
         "updated": "Mis à jour le 12 août 2026",
-        "section": ("1. Applications, développeur et responsable légal", "Cette politique s’applique aux applications Bus - Monopoli et Mon Bus - Grenoble - Tag, toutes deux publiées sur Google Play sous le nom de développeur Rodrigo Locoselli. La personne physique juridiquement responsable, exploitant les applications et responsable du traitement est Rodrigo Locoselli Gutierres, située au 16 Rue Nicolas Chorier, 38000 Grenoble, France. Contact : locoselli2016@gmail.com."),
+        "section": ("1. Applications, développeur et responsable légal", "Cette politique s’applique aux applications Bus - Monopoli et Mon Bus - Grenoble - Tag, toutes deux publiées sur Google Play sous le nom de développeur Rodrigo Locoselli. La personne physique juridiquement responsable, exploitant les applications et responsable du traitement est Rodrigo Locoselli Gutierres, située à Grenoble, France. Contact : locoselli2016@gmail.com."),
     },
     "it": {
         "title": "Informativa sulla privacy — Bus - Monopoli",
         "intro": "Come trattiamo i dati durante l’uso delle app Bus - Monopoli e Mon Bus - Grenoble - Tag.",
         "updated": "Aggiornato il 12 agosto 2026",
-        "section": ("1. App, sviluppatore e responsabile legale", "Questa informativa si applica alle app Bus - Monopoli e Mon Bus - Grenoble - Tag, entrambe pubblicate su Google Play con il nome sviluppatore Rodrigo Locoselli. La persona fisica legalmente responsabile, gestore delle app e titolare del trattamento è Rodrigo Locoselli Gutierres, con sede in 16 Rue Nicolas Chorier, 38000 Grenoble, Francia. Contatto: locoselli2016@gmail.com."),
+        "section": ("1. App, sviluppatore e responsabile legale", "Questa informativa si applica alle app Bus - Monopoli e Mon Bus - Grenoble - Tag, entrambe pubblicate su Google Play con il nome sviluppatore Rodrigo Locoselli. La persona fisica legalmente responsabile, gestore delle app e titolare del trattamento è Rodrigo Locoselli Gutierres, con sede a Grenoble, Francia. Contatto: locoselli2016@gmail.com."),
     },
     "es": {
         "title": "Política de privacidad — Bus - Monopoli",
         "intro": "Cómo tratamos los datos al utilizar las aplicaciones Bus - Monopoli y Mon Bus - Grenoble - Tag.",
         "updated": "Actualizado el 12 de agosto de 2026",
-        "section": ("1. Aplicaciones, desarrollador y responsable legal", "Esta política se aplica a las aplicaciones Bus - Monopoli y Mon Bus - Grenoble - Tag, ambas publicadas en Google Play con el nombre de desarrollador Rodrigo Locoselli. La persona física legalmente responsable, operadora de las aplicaciones y responsable del tratamiento es Rodrigo Locoselli Gutierres, ubicada en 16 Rue Nicolas Chorier, 38000 Grenoble, Francia. Contacto: locoselli2016@gmail.com."),
+        "section": ("1. Aplicaciones, desarrollador y responsable legal", "Esta política se aplica a las aplicaciones Bus - Monopoli y Mon Bus - Grenoble - Tag, ambas publicadas en Google Play con el nombre de desarrollador Rodrigo Locoselli. La persona física legalmente responsable, operadora de las aplicaciones y responsable del tratamiento es Rodrigo Locoselli Gutierres, ubicada en Grenoble, Francia. Contacto: locoselli2016@gmail.com."),
     },
 }
 
