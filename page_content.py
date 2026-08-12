@@ -40,3 +40,37 @@ PUBLIC_PAGES["pt-br"]["privacy"]["sections"].append(("11. Favoritos locais", "As
 PUBLIC_PAGES["fr"]["privacy"]["sections"].append(("11. Favoris locaux", "Les lignes de Mon espace sont conservées dans le stockage local du navigateur. Elles ne sont ni envoyées à un compte ni synchronisées. Vous pouvez les retirer ou effacer les données du site."))
 PUBLIC_PAGES["it"]["privacy"]["sections"].append(("11. Preferiti locali", "Le linee del Mio spazio sono conservate nel localStorage del browser. Non vengono inviate a un account né sincronizzate. Puoi rimuoverle o cancellare i dati del sito."))
 PUBLIC_PAGES["es"]["privacy"]["sections"].append(("11. Favoritos locales", "Las líneas de Mi espacio se guardan en el almacenamiento local del navegador. No se envían a una cuenta ni se sincronizan. Puedes eliminarlas o borrar los datos del sitio."))
+
+# Keep the Google Play app, developer, and legal-operator identifiers explicit
+# and consistent in every localized version of the policy.
+PRIVACY_APP_IDENTITY = {
+    "pt-br": {
+        "title": "Política de Privacidade — Bus - Monopoli",
+        "intro": "Como tratamos dados e protegemos suas escolhas ao usar os aplicativos Bus - Monopoli e Mon Bus - Grenoble - Tag.",
+        "updated": "Atualizado em 12 de agosto de 2026",
+        "section": ("1. Aplicativos, desenvolvedor e responsável legal", "Esta Política de Privacidade se aplica aos aplicativos Bus - Monopoli e Mon Bus - Grenoble - Tag, ambos publicados no Google Play com o nome de desenvolvedor Rodrigo Locoselli. A pessoa física responsável legal, operadora dos aplicativos e controladora de dados é Rodrigo Locoselli Gutierres, situada em 16 Rue Nicolas Chorier, 38000 Grenoble, França. Contato: locoselli2016@gmail.com."),
+    },
+    "fr": {
+        "title": "Politique de confidentialité — Bus - Monopoli",
+        "intro": "Comment nous traitons les données lors de l’utilisation des applications Bus - Monopoli et Mon Bus - Grenoble - Tag.",
+        "updated": "Mis à jour le 12 août 2026",
+        "section": ("1. Applications, développeur et responsable légal", "Cette politique s’applique aux applications Bus - Monopoli et Mon Bus - Grenoble - Tag, toutes deux publiées sur Google Play sous le nom de développeur Rodrigo Locoselli. La personne physique juridiquement responsable, exploitant les applications et responsable du traitement est Rodrigo Locoselli Gutierres, située au 16 Rue Nicolas Chorier, 38000 Grenoble, France. Contact : locoselli2016@gmail.com."),
+    },
+    "it": {
+        "title": "Informativa sulla privacy — Bus - Monopoli",
+        "intro": "Come trattiamo i dati durante l’uso delle app Bus - Monopoli e Mon Bus - Grenoble - Tag.",
+        "updated": "Aggiornato il 12 agosto 2026",
+        "section": ("1. App, sviluppatore e responsabile legale", "Questa informativa si applica alle app Bus - Monopoli e Mon Bus - Grenoble - Tag, entrambe pubblicate su Google Play con il nome sviluppatore Rodrigo Locoselli. La persona fisica legalmente responsabile, gestore delle app e titolare del trattamento è Rodrigo Locoselli Gutierres, con sede in 16 Rue Nicolas Chorier, 38000 Grenoble, Francia. Contatto: locoselli2016@gmail.com."),
+    },
+    "es": {
+        "title": "Política de privacidad — Bus - Monopoli",
+        "intro": "Cómo tratamos los datos al utilizar las aplicaciones Bus - Monopoli y Mon Bus - Grenoble - Tag.",
+        "updated": "Actualizado el 12 de agosto de 2026",
+        "section": ("1. Aplicaciones, desarrollador y responsable legal", "Esta política se aplica a las aplicaciones Bus - Monopoli y Mon Bus - Grenoble - Tag, ambas publicadas en Google Play con el nombre de desarrollador Rodrigo Locoselli. La persona física legalmente responsable, operadora de las aplicaciones y responsable del tratamiento es Rodrigo Locoselli Gutierres, ubicada en 16 Rue Nicolas Chorier, 38000 Grenoble, Francia. Contacto: locoselli2016@gmail.com."),
+    },
+}
+
+for locale, identity in PRIVACY_APP_IDENTITY.items():
+    policy = PUBLIC_PAGES[locale]["privacy"]
+    policy.update({key: identity[key] for key in ("title", "intro", "updated")})
+    policy["sections"][0] = identity["section"]
