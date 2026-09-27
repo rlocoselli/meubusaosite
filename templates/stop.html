@@ -18,7 +18,7 @@
     <details class="timetable-group" open data-search="{{ group.route|lower }}">
       <summary><b>{{ group.route }}</b><span>{{ group['items']|length }}</span></summary>
       <table class="timetable"><thead><tr><th>{{ t('hour') }}</th><th>{{ t('destination') }}</th></tr></thead>
-      <tbody>{% for d in group['items'] %}<tr><td><time>{{ d.time or '—' }}</time></td><td>{{ d.headsign or '—' }}</td></tr>{% endfor %}</tbody></table>
+      <tbody>{% for d in group['items'] %}<tr class="{{ 'is-next' if d.is_next }}"><td><time>{{ d.time or '—' }}</time></td><td>{{ d.headsign or '—' }}</td></tr>{% endfor %}</tbody></table>
     </details>
     {% else %}<div class="empty"><span>🚌</span><p>{{ t('no_upcoming') }}</p><small>{{ t('api_missing') }}</small></div>{% endfor %}
   </div>

@@ -34,7 +34,9 @@ async function openStopSheet(stop,point){
   const response=await fetch(`/api/${stopSheet.dataset.city}/stop/${encodeURIComponent(stopId)}`);const data=await response.json();
   const routes=document.getElementById('stopSheetRoutes'),departures=document.getElementById('stopSheetDepartures');
   routes.innerHTML=(data.routes||[]).map(route=>`<a href="/city/${stopSheet.dataset.city}/line/${encodeURIComponent(route.id)}" class="sheet-route"><b style="background:${route.color};color:${route.text_color}">${route.short}</b><span>${route.name||route.short}</span></a>`).join('');if(!routes.innerHTML)emptySheet(routes);
-  departures.innerHTML=(data.departures||[]).map(item=>`<div class="sheet-departure"><b style="background:#${String(item.route_color||'0c7662').replace('#','')}">${item.route_short_name||item.route_id||'•'}</b><span><strong>${item.trip_headsign||item.route_long_name||''}</strong><small>${stopSheet.dataset.scheduled}</small></span><time>${item.departure_time||item.time||'—'}</time></div>`).join('');if(!departures.innerHTML)emptySheet(departures);
+  const times=data.times||[],upcoming=data.next,legend=document.getElementById('stopSheetLegend');
+  legend.hidden=upcoming===undefined||upcoming===null||upcoming<0;
+  departures.innerHTML=times.map((time,index)=>`<span class="time-chip${index===upcoming?' is-next':''}"${index===upcoming?` aria-current="true" title="${stopSheet.dataset.next}"`:''}>${time}</span>`).join('');if(!departures.innerHTML)emptySheet(departures);
  }catch(error){emptySheet(document.getElementById('stopSheetRoutes'));emptySheet(document.getElementById('stopSheetDepartures'))}
  document.getElementById('stopSheetLoading').hidden=true;document.getElementById('stopSheetContent').hidden=false;
 }
