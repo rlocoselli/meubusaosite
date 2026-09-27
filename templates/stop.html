@@ -1,0 +1,44 @@
+{% extends 'base.html' %}{% block title %}{{ stop.name }} · {{ city.name }}{% endblock %}
+{% block content %}
+<section class="line-head stop-head">
+  <a class="back" href="{{ url_for('city', city_id=city_id) }}">← {{ city.name }}</a>
+  <div class="line-badge stop-badge">⌖</div>
+  <div>
+    <p>{{ t('stop_timetable') }} · {{ city.name }}</p>
+    <h1>{{ stop.name }}</h1>
+    <span>{{ t('stop_code') }}: {{ stop.code }} · {{ stop.id }}</span>
+    {% if stop.lat is not none and stop.lon is not none %}<span class="stop-coords">{{ stop.lat }}, {{ stop.lon }}</span>{% endif %}
+  </div>
+</section>
+<section class="stop-layout">
+  <div class="timetable-card">
+    <div class="panel-title"><div><small>{{ t('departures_by_line') }}</small><h2>{{ t('all_day') }}</h2></div><span class="count">{{ departures|length }}</span></div>
+    <label class="search"><span>⌕</span><input id="timetableSearch" placeholder="{{ t('search_routes') }}"></label>
+    {% for group in grouped %}
+    <details class="timetable-group" open data-search="{{ group.route|lower }}">
+      <summary><b>{{ group.route }}</b><span>{{ group['items']|length }}</span></summary>
+      <table class="timetable"><thead><tr><th>{{ t('hour') }}</th><th>{{ t('destination') }}</th></tr></thead>
+      <tbody>{% for d in group['items'] %}<tr><td><time>{{ d.time or '—' }}</time></td><td>{{ d.headsign or '—' }}</td></tr>{% endfor %}</tbody></table>
+    </details>
+    {% else %}<div class="empty"><span>🚌</span><p>{{ t('no_upcoming') }}</p><small>{{ t('api_missing') }}</small></div>{% endfor %}
+  </div>
+  <aside class="stop-side">
+    <div class="timetable-card lines-card"><div class="panel-title"><div><small>{{ stop.name }}</small><h2>{{ t('lines_here') }}</h2></div><span class="count">{{ routes_here|length }}</span></div>
+      <div class="sheet-routes">{% for r in routes_here %}<a class="chip-route" href="{{ url_for('line', city_id=city_id, route_id=r.id) }}"><b style="background:{{ r.color }};color:{{ r.text_color }}">{{ r.short }}</b><span>{{ r.name or r.short }}</span></a>{% else %}<div class="empty"><p>{{ t('no_data') }}</p></div>{% endfor %}</div>
+    </div>
+    <div class="timetable-card directions"><small>{{ t('getting_there') }}</small><h2>{{ t('how_to_arrive') }}</h2><p>{{ t('how_to_arrive_text') }}</p>
+      <div class="direction-actions">
+        {% if stop.lat is not none and stop.lon is not none %}
+        <a class="btn dark" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination={{ stop.lat }},{{ stop.lon }}&travelmode=transit">{{ t('open_google_maps') }} ↗</a>
+        <a class="btn lime" target="_blank" rel="noopener" href="https://www.openstreetmap.org/directions?to={{ stop.lat }},{{ stop.lon }}">{{ t('open_osm') }} ↗</a>
+        <button class="btn" id="useMyLocation" type="button">⌖ {{ t('use_my_location') }}</button>
+        {% else %}<div class="empty"><p>{{ t('no_data') }}</p></div>{% endif %}
+      </div>
+    </div>
+  </aside>
+</section>
+{% endblock %}
+{% block scripts %}<script>
+document.getElementById('timetableSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.timetable-group').forEach(g=>{g.hidden=!g.dataset.search.includes(q)})});
+document.getElementById('useMyLocation')?.addEventListener('click',()=>{const dest="{{ stop.lat }},{{ stop.lon }}";const open=o=>window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(dest)}&travelmode=transit`,'_blank','noopener');if(!navigator.geolocation){open('');return}navigator.geolocation.getCurrentPosition(p=>open(`${p.coords.latitude},${p.coords.longitude}`),()=>open(''))});
+</script>{% endblock %}

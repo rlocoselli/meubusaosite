@@ -67,10 +67,10 @@ PAGE_CONTENT = {
 }
 
 MAP_COPY = {
-    "pt-br": {"stop_details":"Detalhes da parada", "lines_here":"Linhas nesta parada", "upcoming":"Próximos ônibus", "getting_there":"Como chegar", "directions_text":"Abra uma rota de transporte público da sua localização até esta parada.", "open_directions":"Criar rota", "loading":"Carregando informações…", "close":"Fechar", "minutes":"min", "scheduled":"Horário previsto", "location_error":"Não foi possível obter sua localização. Abriremos a rota usando seu ponto de partida escolhido no mapa.", "my_space":"Meu espaço", "favorites_title":"Suas linhas favoritas", "favorites_intro":"Acesse rapidamente as linhas que você usa. Tudo fica salvo somente neste dispositivo, sem cadastro.", "favorites_empty":"Você ainda não salvou nenhuma linha.", "favorites_empty_text":"Explore uma cidade e toque na estrela de uma linha para encontrá-la aqui.", "explore_lines":"Explorar linhas", "remove_favorite":"Remover favorito", "add_favorite":"Salvar nos favoritos", "local_note":"Armazenado neste dispositivo"},
-    "fr": {"stop_details":"Détails de l’arrêt", "lines_here":"Lignes à cet arrêt", "upcoming":"Prochains bus", "getting_there":"Comment s’y rendre", "directions_text":"Ouvrez un itinéraire en transports publics depuis votre position jusqu’à cet arrêt.", "open_directions":"Créer l’itinéraire", "loading":"Chargement des informations…", "close":"Fermer", "minutes":"min", "scheduled":"Horaire prévu", "location_error":"Votre position n’est pas disponible. Choisissez votre point de départ sur la carte.", "my_space":"Mon espace", "favorites_title":"Vos lignes favorites", "favorites_intro":"Retrouvez rapidement vos lignes habituelles. Elles restent uniquement sur cet appareil, sans compte.", "favorites_empty":"Vous n’avez encore enregistré aucune ligne.", "favorites_empty_text":"Explorez une ville et touchez l’étoile d’une ligne pour la retrouver ici.", "explore_lines":"Explorer les lignes", "remove_favorite":"Retirer des favoris", "add_favorite":"Ajouter aux favoris", "local_note":"Enregistré sur cet appareil"},
-    "it": {"stop_details":"Dettagli fermata", "lines_here":"Linee a questa fermata", "upcoming":"Prossimi autobus", "getting_there":"Come arrivare", "directions_text":"Apri un percorso con il trasporto pubblico dalla tua posizione a questa fermata.", "open_directions":"Crea percorso", "loading":"Caricamento informazioni…", "close":"Chiudi", "minutes":"min", "scheduled":"Orario previsto", "location_error":"Posizione non disponibile. Scegli il punto di partenza sulla mappa.", "my_space":"Il mio spazio", "favorites_title":"Le tue linee preferite", "favorites_intro":"Accedi rapidamente alle linee che usi. I dati restano solo su questo dispositivo, senza account.", "favorites_empty":"Non hai ancora salvato nessuna linea.", "favorites_empty_text":"Esplora una città e tocca la stella di una linea per trovarla qui.", "explore_lines":"Esplora le linee", "remove_favorite":"Rimuovi dai preferiti", "add_favorite":"Aggiungi ai preferiti", "local_note":"Salvato su questo dispositivo"},
-    "es": {"stop_details":"Detalles de la parada", "lines_here":"Líneas en esta parada", "upcoming":"Próximos autobuses", "getting_there":"Cómo llegar", "directions_text":"Abre una ruta en transporte público desde tu ubicación hasta esta parada.", "open_directions":"Crear ruta", "loading":"Cargando información…", "close":"Cerrar", "minutes":"min", "scheduled":"Horario previsto", "location_error":"No pudimos obtener tu ubicación. Elige el punto de partida en el mapa.", "my_space":"Mi espacio", "favorites_title":"Tus líneas favoritas", "favorites_intro":"Accede rápidamente a las líneas que utilizas. Todo se guarda solo en este dispositivo, sin cuenta.", "favorites_empty":"Todavía no has guardado ninguna línea.", "favorites_empty_text":"Explora una ciudad y toca la estrella de una línea para encontrarla aquí.", "explore_lines":"Explorar líneas", "remove_favorite":"Eliminar favorito", "add_favorite":"Guardar en favoritos", "local_note":"Guardado en este dispositivo"},
+    "pt-br": {"stop_details":"Detalhes da parada", "lines_here":"Linhas nesta parada", "upcoming":"Próximos ônibus", "getting_there":"Como chegar", "directions_text":"Abra uma rota de transporte público da sua localização até esta parada.", "open_directions":"Criar rota", "view_full_stop":"Ver horário completo", "stop_timetable":"Horário da parada", "departures_by_line":"Partidas por linha", "destination":"Destino", "hour":"Hora", "how_to_arrive":"Como chegar até aqui", "how_to_arrive_text":"Use sua localização atual ou abra o trajeto no Google Maps ou OpenStreetMap. A página já leva as coordenadas exatas da parada.", "open_google_maps":"Abrir no Google Maps", "open_osm":"Abrir no OpenStreetMap", "use_my_location":"Usar minha localização", "stop_code":"Código da parada", "no_upcoming":"Sem próximas partidas encontradas para hoje.", "all_day":"Grade completa do dia", "loading":"Carregando informações…", "close":"Fechar", "minutes":"min", "scheduled":"Horário previsto", "location_error":"Não foi possível obter sua localização. Abriremos a rota usando seu ponto de partida escolhido no mapa.", "my_space":"Meu espaço", "favorites_title":"Suas linhas favoritas", "favorites_intro":"Acesse rapidamente as linhas que você usa. Tudo fica salvo somente neste dispositivo, sem cadastro.", "favorites_empty":"Você ainda não salvou nenhuma linha.", "favorites_empty_text":"Explore uma cidade e toque na estrela de uma linha para encontrá-la aqui.", "explore_lines":"Explorar linhas", "remove_favorite":"Remover favorito", "add_favorite":"Salvar nos favoritos", "local_note":"Armazenado neste dispositivo"},
+    "fr": {"stop_details":"Détails de l’arrêt", "lines_here":"Lignes à cet arrêt", "upcoming":"Prochains bus", "getting_there":"Comment s’y rendre", "directions_text":"Ouvrez un itinéraire en transports publics depuis votre position jusqu’à cet arrêt.", "open_directions":"Créer l’itinéraire", "view_full_stop":"Voir l’horaire complet", "stop_timetable":"Horaire de l’arrêt", "departures_by_line":"Départs par ligne", "destination":"Destination", "hour":"Heure", "how_to_arrive":"Comment arriver jusqu’ici", "how_to_arrive_text":"Utilisez votre position actuelle ou ouvrez le trajet dans Google Maps ou OpenStreetMap. La page utilise déjà les coordonnées exactes de l’arrêt.", "open_google_maps":"Ouvrir dans Google Maps", "open_osm":"Ouvrir dans OpenStreetMap", "use_my_location":"Utiliser ma position", "stop_code":"Code de l’arrêt", "no_upcoming":"Aucun prochain départ trouvé pour aujourd’hui.", "all_day":"Programme complet du jour", "loading":"Chargement des informations…", "close":"Fermer", "minutes":"min", "scheduled":"Horaire prévu", "location_error":"Votre position n’est pas disponible. Choisissez votre point de départ sur la carte.", "my_space":"Mon espace", "favorites_title":"Vos lignes favorites", "favorites_intro":"Retrouvez rapidement vos lignes habituelles. Elles restent uniquement sur cet appareil, sans compte.", "favorites_empty":"Vous n’avez encore enregistré aucune ligne.", "favorites_empty_text":"Explorez une ville et touchez l’étoile d’une ligne pour la retrouver ici.", "explore_lines":"Explorer les lignes", "remove_favorite":"Retirer des favoris", "add_favorite":"Ajouter aux favoris", "local_note":"Enregistré sur cet appareil"},
+    "it": {"stop_details":"Dettagli fermata", "lines_here":"Linee a questa fermata", "upcoming":"Prossimi autobus", "getting_there":"Come arrivare", "directions_text":"Apri un percorso con il trasporto pubblico dalla tua posizione a questa fermata.", "open_directions":"Crea percorso", "view_full_stop":"Vedi orario completo", "stop_timetable":"Orario della fermata", "departures_by_line":"Partenze per linea", "destination":"Destinazione", "hour":"Ora", "how_to_arrive":"Come arrivare qui", "how_to_arrive_text":"Usa la tua posizione attuale oppure apri il percorso in Google Maps o OpenStreetMap. La pagina usa già le coordinate esatte della fermata.", "open_google_maps":"Apri in Google Maps", "open_osm":"Apri in OpenStreetMap", "use_my_location":"Usa la mia posizione", "stop_code":"Codice fermata", "no_upcoming":"Nessuna prossima partenza trovata per oggi.", "all_day":"Programma completo del giorno", "loading":"Caricamento informazioni…", "close":"Chiudi", "minutes":"min", "scheduled":"Orario previsto", "location_error":"Posizione non disponibile. Scegli il punto di partenza sulla mappa.", "my_space":"Il mio spazio", "favorites_title":"Le tue linee preferite", "favorites_intro":"Accedi rapidamente alle linee che usi. I dati restano solo su questo dispositivo, senza account.", "favorites_empty":"Non hai ancora salvato nessuna linea.", "favorites_empty_text":"Esplora una città e tocca la stella di una linea per trovarla qui.", "explore_lines":"Esplora le linee", "remove_favorite":"Rimuovi dai preferiti", "add_favorite":"Aggiungi ai preferiti", "local_note":"Salvato su questo dispositivo"},
+    "es": {"stop_details":"Detalles de la parada", "lines_here":"Líneas en esta parada", "upcoming":"Próximos autobuses", "getting_there":"Cómo llegar", "directions_text":"Abre una ruta en transporte público desde tu ubicación hasta esta parada.", "open_directions":"Crear ruta", "view_full_stop":"Ver horario completo", "stop_timetable":"Horario de la parada", "departures_by_line":"Salidas por línea", "destination":"Destino", "hour":"Hora", "how_to_arrive":"Cómo llegar hasta aquí", "how_to_arrive_text":"Usa tu ubicación actual o abre el trayecto en Google Maps u OpenStreetMap. La página ya incluye las coordenadas exactas de la parada.", "open_google_maps":"Abrir en Google Maps", "open_osm":"Abrir en OpenStreetMap", "use_my_location":"Usar mi ubicación", "stop_code":"Código de parada", "no_upcoming":"No se encontraron próximas salidas para hoy.", "all_day":"Programa completo del día", "loading":"Cargando información…", "close":"Cerrar", "minutes":"min", "scheduled":"Horario previsto", "location_error":"No pudimos obtener tu ubicación. Elige el punto de partida en el mapa.", "my_space":"Mi espacio", "favorites_title":"Tus líneas favoritas", "favorites_intro":"Accede rápidamente a las líneas que utilizas. Todo se guarda solo en este dispositivo, sin cuenta.", "favorites_empty":"Todavía no has guardado ninguna línea.", "favorites_empty_text":"Explora una ciudad y toca la estrella de una línea para encontrarla aquí.", "explore_lines":"Explorar líneas", "remove_favorite":"Eliminar favorito", "add_favorite":"Guardar en favoritos", "local_note":"Guardado en este dispositivo"},
 }
 
 TEAM = [
@@ -115,6 +115,40 @@ def rows(data):
         for key in ("data", "results", "routes", "stops", "departures", "items"):
             if isinstance(data.get(key), list): return data[key]
     return []
+
+def stop_view(item):
+    get = item.get
+    stop_id = str(get("stop_id", get("stopId", get("id", ""))) or "")
+    name = get("stop_name", get("stopName", get("name", ""))) or stop_id
+    lat_raw = get("stop_lat", get("stopLat", get("lat", get("latitude"))))
+    lon_raw = get("stop_lon", get("stopLon", get("lon", get("lng", get("longitude")))))
+    try:
+        lat = float(lat_raw)
+    except (TypeError, ValueError):
+        lat = None
+    try:
+        lon = float(lon_raw)
+    except (TypeError, ValueError):
+        lon = None
+    return {"id": stop_id, "name": str(name), "lat": lat, "lon": lon, "code": str(get("stop_code", get("stopCode", get("code", stop_id))) or stop_id)}
+
+def departure_view(item):
+    get = item.get
+    time_value = str(get("departure_time", get("departureTime", get("time", get("arrival_time", get("arrivalTime", ""))))) or "")
+    return {
+        "time": time_value,
+        "hour": time_value[:2] if len(time_value) >= 5 and time_value[2] == ":" else "",
+        "route": str(get("route_short_name", get("routeShortName", get("route_id", get("routeId", "")))) or ""),
+        "headsign": str(get("trip_headsign", get("tripHeadsign", get("headsign", get("route_long_name", "")))) or ""),
+        "raw": item,
+    }
+
+def group_timetable(departures):
+    grouped: dict[str, list[dict]] = {}
+    for item in departures:
+        key = item.get("route") or "•"
+        grouped.setdefault(key, []).append(item)
+    return [{"route": route, "items": sorted(items, key=lambda x: x.get("time", ""))} for route, items in sorted(grouped.items())]
 
 def route_view(item):
     return {
@@ -259,6 +293,26 @@ def line(city_id, route_id):
         stops = rows(api_get(f"getStopsByTrip/{city_id}/{trip_id}")) if trip_id else []
         shape = rows(api_get(f"getShapeByTripId/{city_id}", {"tripId": trip_id})) if trip_id else []
     return render_template("line.html", city_id=city_id, city=city_info, route=route, stops=stops, shape=shape, directions=directions, selected_direction=selected_direction)
+
+@app.get("/city/<city_id>/stop/<path:stop_id>")
+def stop_page(city_id, stop_id):
+    city_info = CITIES.get(city_id)
+    if not city_info: abort(404)
+    all_stops = rows(api_get(f"getStops/{city_id}"))
+    stop = None
+    for raw in all_stops:
+        view = stop_view(raw if isinstance(raw, dict) else {})
+        if view["id"] == stop_id:
+            stop = {**view, "raw": raw}
+            break
+    if stop is None:
+        stop = {"id": stop_id, "name": stop_id, "lat": None, "lon": None, "code": stop_id}
+    departures_raw = rows(api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": date.today().isoformat(), "limit": 200}))
+    departures = [departure_view(x) if isinstance(x, dict) else {"time": "", "hour": "", "route": "", "headsign": "", "raw": x} for x in departures_raw]
+    grouped = group_timetable(departures)
+    routes_here = [route_view(x) for x in rows(api_get(f"getRouteByStopId/{city_id}/{stop_id}"))]
+    return render_template("stop.html", city_id=city_id, city=city_info, stop=stop, grouped=grouped, departures=departures, routes_here=routes_here)
+
 
 @app.get("/api/<city_id>/departures")
 def departures(city_id):
