@@ -327,9 +327,17 @@ def privacy_page():
 def city(city_id):
     city_info = CITIES.get(city_id)
     if not city_info: abort(404)
+    if request.args.get("from") or request.args.get("to"):
+        return redirect(url_for("journey_page", city_id=city_id) + "?" + request.query_string.decode("utf-8", errors="replace"))
     routes = [route_view(x) for x in rows(api_get(f"getRoutes/{city_id}"))]
     stops = rows(api_get(f"getStops/{city_id}"))
     return render_template("city.html", city_id=city_id, city=city_info, routes=routes, stops=stops[:100], stop_count=len(stops), selected_date=service_date(city_id).isoformat())
+
+@app.get("/city/<city_id>/plan")
+def journey_page(city_id):
+    city_info = CITIES.get(city_id)
+    if not city_info: abort(404)
+    return render_template("journey.html", city_id=city_id, city=city_info, selected_date=service_date(city_id).isoformat())
 
 def line_data(city_id, route_id, selected_date, direction=""):
     city_info = CITIES[city_id]

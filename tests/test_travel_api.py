@@ -17,6 +17,19 @@ class TravelApiTests(unittest.TestCase):
             self.assertEqual(self.client.get('/api/Grenoble_France/journeys?from=invalid&to=D&time=09:00').status_code,400)
         self.assertEqual(self.client.get('/api/Grenoble_France/journeys?from=A&to=D&time=25:00').status_code,400)
 
+    def test_planner_separate_from_timetable_and_legacy_links(self):
+        with patch.object(app,'api_get',return_value=[]):
+            city=self.client.get('/city/Grenoble_France').get_data(as_text=True)
+            self.assertNotIn('id="journeyForm"',city)
+            self.assertLess(city.index('id="departures"'),city.index('id="network"'))
+            planner=self.client.get('/city/Grenoble_France/plan?date=2026-10-10')
+            self.assertEqual(planner.status_code,200)
+            self.assertIn('id="journeyForm"',planner.get_data(as_text=True))
+            old=self.client.get('/city/Grenoble_France?from=A&to=D&date=2026-10-10')
+            self.assertEqual(old.status_code,302)
+            self.assertEqual(old.location,'/city/Grenoble_France/plan?from=A&to=D&date=2026-10-10')
+            self.assertEqual(self.client.get('/city/unknown/plan').status_code,404)
+
     def test_vehicle_feed_only_includes_fresh_valid_route_positions(self):
         now=time.time()
         values=[dict(vehicle_id='valid',lat=45,lon=5,route_id='12',timestamp=now),dict(vehicle_id='old',lat=45,lon=5,route_id='12',timestamp=now-180),dict(vehicle_id='bad',lat=float('nan'),lon=5,route_id='12',timestamp=now),dict(vehicle_id='other',lat=45,lon=5,route_id='13',timestamp=now)]

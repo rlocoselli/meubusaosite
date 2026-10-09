@@ -1,4 +1,4 @@
-const VERSION='meubusao-offline-v1';
+const VERSION='meubusao-offline-v2';
 const STATIC=VERSION+'-static',PAGES=VERSION+'-pages',DATA=VERSION+'-data';
 const ASSETS=['/offline','/my-space','/static/css/app.css','/static/js/app.js','/static/js/transit.js','/static/js/travel.js','/static/vendor/leaflet/leaflet.js','/static/vendor/leaflet/leaflet.css','/static/vendor/leaflet/images/marker-icon.png','/static/vendor/leaflet/images/marker-shadow.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(STATIC).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));

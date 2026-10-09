@@ -13,11 +13,11 @@ document.querySelectorAll('[data-share]').forEach(button=>button.addEventListene
 document.getElementById('shareStop')?.addEventListener('click',()=>{if(!selectedStop)return;const id=selectedStop.stop.stop_id??selectedStop.stop.stopId??selectedStop.stop.id;shareURL(new URL(`/city/${encodeURIComponent(stopSheet.dataset.city)}/stop/${encodeURIComponent(id)}?${new URLSearchParams({date:document.getElementById('sheetDate').value})}`,location.origin))});
 async function saveOffline(url=canonicalURL(),quiet=false){
  if(!workerReady){if(!quiet)toast(travelCopy.offline_unavailable);return false}const worker=await workerReady;if(!worker){if(!quiet)toast(travelCopy.offline_unavailable);return false}
- try{const response=await fetch(url);if(!response.ok)throw Error();const cache=await caches.open('meubusao-offline-v1-pages');const headers=new Headers(response.headers),savedAt=new Date().toISOString();headers.set('X-Saved-At',savedAt);await cache.put(String(url),new Response(await response.arrayBuffer(),{status:200,headers}));const entries=travelStore.read(offlineIndexKey).filter(item=>item.url!==String(url));entries.unshift({url:String(url),title:document.title,savedAt});travelStore.write(offlineIndexKey,entries.slice(0,25));if(!quiet)toast(travelCopy.offline_saved);renderOfflinePages();return true}catch(error){if(!quiet)toast(travelCopy.offline_unavailable);return false}
+ try{const response=await fetch(url);if(!response.ok)throw Error();const cache=await caches.open('meubusao-offline-v2-pages');const headers=new Headers(response.headers),savedAt=new Date().toISOString();headers.set('X-Saved-At',savedAt);await cache.put(String(url),new Response(await response.arrayBuffer(),{status:200,headers}));const entries=travelStore.read(offlineIndexKey).filter(item=>item.url!==String(url));entries.unshift({url:String(url),title:document.title,savedAt});travelStore.write(offlineIndexKey,entries.slice(0,25));if(!quiet)toast(travelCopy.offline_saved);renderOfflinePages();return true}catch(error){if(!quiet)toast(travelCopy.offline_unavailable);return false}
 }
 document.querySelectorAll('[data-save-offline]').forEach(button=>button.addEventListener('click',()=>saveOffline()));
 function renderOfflinePages(){const list=document.getElementById('offlinePages');if(!list)return;list.replaceChildren();travelStore.read(offlineIndexKey).forEach(item=>{let url;try{url=new URL(item.url);if(url.origin!==location.origin)return}catch(error){return}const card=element('article','offline-page'),link=element('a','',item.title);link.href=url.href;card.append(link,element('small','',`${travelCopy.saved_at}: ${new Date(item.savedAt).toLocaleString(document.documentElement.lang)}`));list.append(card)})}
-document.getElementById('clearOffline')?.addEventListener('click',async()=>{if('caches' in window){await Promise.all([caches.delete('meubusao-offline-v1-pages'),caches.delete('meubusao-offline-v1-data')])}travelStore.write(offlineIndexKey,[]);renderOfflinePages();toast(travelCopy.clear_offline)});renderOfflinePages();
+document.getElementById('clearOffline')?.addEventListener('click',async()=>{if('caches' in window){await Promise.all([caches.delete('meubusao-offline-v2-pages'),caches.delete('meubusao-offline-v2-data')])}travelStore.write(offlineIndexKey,[]);renderOfflinePages();toast(travelCopy.clear_offline)});renderOfflinePages();
 window.addEventListener('favoriteschanged',()=>{if(!navigator.onLine)return;for(const item of getFavorites()){const url=`/city/${encodeURIComponent(item.city)}/${item.type==='stop'?'stop':'line'}/${encodeURIComponent(item.id)}`;fetch(url).catch(()=>{})}});
 
 function icsDate(ms){return new Date(ms).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z')}
@@ -48,7 +48,7 @@ window.addEventListener('load',()=>{if(navigator.onLine&&location.pathname.start
 
 async function warmFavoritePages(){
  if(!workerReady||!navigator.onLine||!await workerReady)return;
- const cache=await caches.open('meubusao-offline-v1-pages');
+ const cache=await caches.open('meubusao-offline-v2-pages');
  for(const item of getFavorites().slice(0,20)){
   const url=new URL(`/city/${encodeURIComponent(item.city)}/${item.type==='stop'?'stop':'line'}/${encodeURIComponent(item.id)}`,location.origin);
   if(await cache.match(url.href))continue;

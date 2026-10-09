@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}{{ t('journey_title') }} · {{ city.name }} · Meu Busão{% endblock %}
+{% block content %}
+<section class="journey-page-head"><a class="back" href="{{ url_for('city', city_id=city_id) }}">← {{ city.name }} · {{ t('timetable') }}</a><p class="eyebrow"><span></span>{{ city.name }} · {{ city.country }}</p><h1>{{ t('journey_title') }}</h1><a class="btn lime" href="{{ url_for('city', city_id=city_id) }}#departures">{{ t('next_departures') }} ↗</a></section>
+{% include 'journey_planner.html' %}
+{% endblock %}

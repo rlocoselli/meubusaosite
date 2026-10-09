@@ -19,6 +19,8 @@ The default API does not publish service alerts. To connect an authenticated ale
 
 Run regression checks with `.venv/bin/python -m unittest discover -s tests -v`.
 
+City pages prioritize departure times, lines, and maps. Journey planning has its own URL, `/city/<city_id>/plan`; older city links containing journey inputs redirect there while preserving the query.
+
 Travel tools now include share links (city, route, direction, stop, service date, and planner inputs), stop/vehicle accessibility, saved schedules, and departure reminders. The planner searches direct rides and up to two transfers over a 12-hour horizon. It respects calendars, date exceptions, pickup/drop-off restrictions, and a minimum two-minute connection buffer. Coordinate approaches (up to 800 m) and transfers between stops (up to 250 m) use approximate straight-line walking distances. Wheelchair-only searches require explicitly accessible boarding/alighting stops and trips, and exclude unverified walking paths. Frequency-based trips and trip-specific transfer rules are not inferred; feeds using the latter report planning as unavailable.
 
 Journey data comes from the API's stops, routes, trips, calendar, calendar exceptions, and stop times, cached for 15 minutes. A cold city snapshot loads trip metadata concurrently. Alternatively configure a local GTFS zip with `MEUBUSAO_GTFS_<CITY_ID_UPPERCASE>`, for example `MEUBUSAO_GTFS_GRENOBLE_FRANCE=/srv/gtfs/grenoble.zip`. The bundled Managua feed is used only without API credentials, and its expired 2023 calendar never produces current-day journeys. Missing/invalid feeds are reported as unavailable.
