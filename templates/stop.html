@@ -9,7 +9,9 @@
     <span>{{ t('stop_code') }}: {{ stop.code }} · {{ stop.id }}</span>
     {% if stop.lat is not none and stop.lon is not none %}<span class="stop-coords">{{ stop.lat }}, {{ stop.lon }}</span>{% endif %}
   </div>
-</section>
+<button class="line-favorite favorite-button" type="button" aria-label="{{ t('add_favorite') }}" data-favorite='{{ {"type":"stop","id":stop.id,"city":city_id,"cityName":city.name,"short":"⌖","name":stop.name,"color":"#0c7662","textColor":"#ffffff"}|tojson }}'>☆ <span>{{ t('add_favorite') }}</span></button></section><div class="stop-accessibility">♿ {{ t('access_yes') if stop.wheelchair == '1' else t('access_no') if stop.wheelchair == '2' else t('access_unknown') }}</div>
+{% include 'travel_actions.html' %}
+{% include 'alerts.html' %}<form class="service-controls" method="get"><label>{{ t('service_date') }}<input name="date" type="date" value="{{ selected_date }}" required></label><button class="btn dark" type="submit">{{ t('find_departures') }}</button><span>{{ t('scheduled_notice') }}</span></form>
 <section class="stop-layout">
   <div class="timetable-card">
     <div class="panel-title"><div><small>{{ t('departures_by_line') }}</small><h2>{{ t('all_day') }}</h2></div><span class="count">{{ departures|length }}</span></div>
@@ -18,13 +20,13 @@
     <details class="timetable-group" open data-search="{{ group.route|lower }}">
       <summary><b>{{ group.route }}</b><span>{{ group['items']|length }}</span></summary>
       <table class="timetable"><thead><tr><th>{{ t('hour') }}</th><th>{{ t('destination') }}</th></tr></thead>
-      <tbody>{% for d in group['items'] %}<tr class="{{ 'is-next' if d.is_next }}"><td><time>{{ d.time or '—' }}</time></td><td>{{ d.headsign or '—' }}</td></tr>{% endfor %}</tbody></table>
+      <tbody>{% for d in group['items'] %}<tr class="{{ 'is-next' if d.is_next }}"><td><time>{{ d.time or '—' }}</time>{% if d.departure_at and not d.cancelled %}<button type="button" class="remind-button" data-remind='{{ dict(at=d.departure_at,route=d.route,headsign=d.headsign)|tojson }}'>{{ t('remind') }}</button>{% endif %}<small class="departure-accessibility">♿ {{ t('access_yes') if d.wheelchair == '1' else t('access_no') if d.wheelchair == '2' else t('access_unknown') }}</small>{% if d.cancelled %}<small class="cancelled-label">{{ t('cancelled') }}</small>{% endif %}</td><td>{{ d.headsign or '—' }}</td></tr>{% endfor %}</tbody></table>
     </details>
     {% else %}<div class="empty"><span>🚌</span><p>{{ t('no_upcoming') }}</p><small>{{ t('api_missing') }}</small></div>{% endfor %}
   </div>
   <aside class="stop-side">
     <div class="timetable-card lines-card"><div class="panel-title"><div><small>{{ stop.name }}</small><h2>{{ t('lines_here') }}</h2></div><span class="count">{{ routes_here|length }}</span></div>
-      <div class="sheet-routes">{% for r in routes_here %}<a class="chip-route" href="{{ url_for('line', city_id=city_id, route_id=r.id) }}"><b style="background:{{ r.color }};color:{{ r.text_color }}">{{ r.short }}</b><span>{{ r.name or r.short }}</span></a>{% else %}<div class="empty"><p>{{ t('no_data') }}</p></div>{% endfor %}</div>
+      <div class="sheet-routes">{% for r in routes_here %}<a class="chip-route" href="{{ url_for('line', city_id=city_id, route_id=r.id, date=selected_date) }}"><b style="background:{{ r.color }};color:{{ r.text_color }}">{{ r.short }}</b><span>{{ r.name or r.short }}</span></a>{% else %}<div class="empty"><p>{{ t('no_data') }}</p></div>{% endfor %}</div>
     </div>
     <div class="timetable-card directions"><small>{{ t('getting_there') }}</small><h2>{{ t('how_to_arrive') }}</h2><p>{{ t('how_to_arrive_text') }}</p>
       <div class="direction-actions">

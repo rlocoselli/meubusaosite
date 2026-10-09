@@ -1,0 +1,2 @@
+{% extends 'base.html' %}
+{% block content %}<section class="space-hero"><p class="eyebrow">⌂ Meu Busão</p><h1>{{ t('offline_title') }}</h1><p>{{ t('offline_hint') }}</p><a class="btn lime" href="{{ url_for('my_space') }}">{{ t('my_space') }} ↗</a></section><section class="favorites-section"><h2>{{ t('offline_title') }}</h2><div id="offlinePages" class="offline-pages"></div></section>{% endblock %}

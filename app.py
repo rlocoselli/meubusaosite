@@ -6,12 +6,19 @@ import binascii
 import json
 import threading
 import time
-from datetime import date, datetime
+import math
+from zoneinfo import ZoneInfo
+from datetime import date, datetime, timedelta
 from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from zipfile import BadZipFile
+from journey import Network, load_zip, seconds, distance
 
 import requests
 from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from page_content import PUBLIC_PAGES
+from travel_copy import TRAVEL_COPY
 
 
 app = Flask(__name__)
@@ -47,6 +54,47 @@ COPY = {
     "it": {"nav_cities":"Città", "nav_plan":"Pianifica", "nav_docs":"Documentazione API", "hero_kicker":"Mobilità urbana, senza complicazioni", "hero_title":"La tua città. Le tue linee. Il tuo prossimo bus.", "hero_text":"Esplora linee, fermate, mappe e orari del trasporto pubblico in 13 città del mondo.", "explore":"Esplora le città", "plan":"Consulta gli orari", "cities_title":"Scegli la tua città", "cities_text":"Informazioni locali, mappe chiare e le linee che fanno muovere ogni luogo.", "routes":"linee", "open_city":"Vedi trasporti", "live":"Dati API", "search_routes":"Cerca linea o destinazione", "all_routes":"Tutte le linee", "stops":"Fermate", "map":"Mappa della rete", "timetable":"Orari", "direction":"Direzione", "today":"Oggi", "find_departures":"Cerca partenze", "stop_placeholder":"Nome o codice fermata", "next_departures":"Prossime partenze", "no_data":"Nessun dato disponibile al momento.", "api_missing":"Configura MEUBUSAO_API_TOKEN per caricare dati in tempo reale.", "back":"Indietro", "line":"Linea", "network":"Rete di trasporto", "hero_stat_cities":"città", "hero_stat_languages":"lingue", "hero_stat_access":"accesso gratuito"},
     "es": {"nav_cities":"Ciudades", "nav_plan":"Planificar", "nav_docs":"Documentación API", "hero_kicker":"Movilidad urbana, sin complicaciones", "hero_title":"Tu ciudad. Tus líneas. Tu próximo bus.", "hero_text":"Explora líneas, paradas, mapas y horarios de transporte público en 13 ciudades del mundo.", "explore":"Explorar ciudades", "plan":"Consultar horarios", "cities_title":"Elige tu ciudad", "cities_text":"Información local, mapas claros y las líneas que mueven cada lugar.", "routes":"líneas", "open_city":"Ver transporte", "live":"Datos de la API", "search_routes":"Buscar línea o destino", "all_routes":"Todas las líneas", "stops":"Paradas", "map":"Mapa de la red", "timetable":"Horarios", "direction":"Dirección", "today":"Hoy", "find_departures":"Buscar salidas", "stop_placeholder":"Nombre o código de la parada", "next_departures":"Próximas salidas", "no_data":"No hay datos disponibles ahora.", "api_missing":"Configura MEUBUSAO_API_TOKEN para cargar datos en vivo.", "back":"Volver", "line":"Línea", "network":"Red de transporte", "hero_stat_cities":"ciudades", "hero_stat_languages":"idiomas", "hero_stat_access":"acceso gratuito"},
 }
+
+# Geographic browsing uses stable region keys and localized labels.
+for city_info in CITIES.values():
+    city_info["continent"] = {"France": "europe", "Italia": "europe", "Brasil": "south_america", "Argentina": "south_america", "Canada": "north_america", "Nicaragua": "north_america", "Australia": "oceania"}[city_info["country"]]
+
+EXPLORER_COPY = {
+    "pt-br": ["Todas as cidades", "Europa", "América do Sul", "América do Norte", "Oceania", "Buscar cidade ou país", "Todos os países", "Trajeto", "Conexão entre pontos · trajeto aproximado", "Ver no mapa", "Horário previsto", "Escolha um ponto para consultar todos os horários", "Nenhuma cidade encontrada"],
+    "fr": ["Toutes les villes", "Europe", "Amérique du Sud", "Amérique du Nord", "Océanie", "Rechercher une ville ou un pays", "Tous les pays", "Itinéraire", "Liaison entre arrêts · tracé approximatif", "Voir sur la carte", "Horaire prévu", "Choisissez un arrêt pour consulter tous les horaires", "Aucune ville trouvée"],
+    "it": ["Tutte le città", "Europa", "Sud America", "Nord America", "Oceania", "Cerca città o paese", "Tutti i paesi", "Percorso", "Collegamento tra fermate · percorso approssimativo", "Vedi sulla mappa", "Orario previsto", "Scegli una fermata per consultare tutti gli orari", "Nessuna città trovata"],
+    "es": ["Todas las ciudades", "Europa", "América del Sur", "América del Norte", "Oceanía", "Buscar ciudad o país", "Todos los países", "Recorrido", "Conexión entre paradas · recorrido aproximado", "Ver en el mapa", "Horario previsto", "Elige una parada para consultar todos los horarios", "No se encontraron ciudades"],
+}
+for language, labels in EXPLORER_COPY.items():
+    COPY[language].update(zip(["all_cities", "europe", "south_america", "north_america", "oceania", "search_cities", "all_countries", "itinerary", "approximate_route", "show_on_map", "scheduled_time", "stop_hint", "no_cities"], labels))
+
+CITY_ZONES = {
+    "France": "Europe/Paris", "Italia": "Europe/Rome", "Brasil": "America/Sao_Paulo",
+    "Argentina": "America/Argentina/Buenos_Aires", "Canada": "America/Toronto",
+    "Nicaragua": "America/Managua", "Australia": "Australia/Brisbane",
+}
+def city_now(city_id):
+    zone = "America/Fortaleza" if city_id == "Fortaleza_Brazil" else CITY_ZONES[CITIES[city_id]["country"]]
+    return datetime.now(ZoneInfo(zone))
+
+def service_date(city_id):
+    value = request.args.get("date", "")
+    try:
+        return date.fromisoformat(value) if value else city_now(city_id).date()
+    except ValueError:
+        abort(400, description="Invalid date; use YYYY-MM-DD")
+
+FEATURE_KEYS = ["service_date", "preview_route", "open_line", "nearby_stops", "find_nearby", "nearby_hint", "distance_hint", "no_nearby", "service_alerts", "alerts_unavailable", "no_alerts", "departure_stop", "minutes", "cancelled", "unavailable", "saved_stops", "saved_lines", "choose_stop", "expand_stops", "collapse_stops", "scheduled_notice", "past_date", "date_fallback"]
+FEATURE_COPY = {
+ "pt-br": ["Data da viagem", "Ver trajeto", "Abrir linha", "Pontos próximos", "Buscar perto de mim", "Encontre pontos em um raio de 1 km.", "Distância em linha reta · caminhada estimada", "Nenhum ponto a menos de 1 km.", "Alertas de serviço", "Alertas não disponíveis para esta rede.", "Nenhum alerta informado pelo serviço.", "Partidas deste ponto", "min", "Cancelado", "Serviço temporariamente indisponível", "Pontos favoritos", "Linhas favoritas", "Escolha um ponto", "Expandir pontos", "Recolher pontos", "Horários programados, sujeitos a alterações.", "Horários da data selecionada", "Trajeto habitual; serviço nesta data não confirmado"],
+ "fr": ["Date du voyage", "Aperçu du trajet", "Ouvrir la ligne", "Arrêts à proximité", "Chercher autour de moi", "Trouvez des arrêts dans un rayon de 1 km.", "Distance à vol d’oiseau · marche estimée", "Aucun arrêt à moins de 1 km.", "Alertes du réseau", "Alertes indisponibles pour ce réseau.", "Aucune alerte signalée par le service.", "Départs à cet arrêt", "min", "Annulé", "Service temporairement indisponible", "Arrêts favoris", "Lignes favorites", "Choisissez un arrêt", "Développer les arrêts", "Réduire les arrêts", "Horaires prévus, susceptibles de changer.", "Horaires à la date sélectionnée", "Itinéraire habituel ; service à cette date non confirmé"],
+ "it": ["Data del viaggio", "Anteprima percorso", "Apri linea", "Fermate vicine", "Cerca vicino a me", "Trova fermate entro 1 km.", "Distanza in linea d’aria · cammino stimato", "Nessuna fermata entro 1 km.", "Avvisi di servizio", "Avvisi non disponibili per questa rete.", "Nessun avviso segnalato dal servizio.", "Partenze da questa fermata", "min", "Cancellato", "Servizio temporaneamente non disponibile", "Fermate preferite", "Linee preferite", "Scegli una fermata", "Espandi fermate", "Riduci fermate", "Orari programmati, soggetti a modifiche.", "Orari della data selezionata", "Percorso abituale; servizio in questa data non confermato"],
+ "es": ["Fecha del viaje", "Vista del recorrido", "Abrir línea", "Paradas cercanas", "Buscar cerca de mí", "Encuentra paradas en un radio de 1 km.", "Distancia en línea recta · caminata estimada", "Ninguna parada a menos de 1 km.", "Alertas del servicio", "Alertas no disponibles para esta red.", "Ninguna alerta indicada por el servicio.", "Salidas de esta parada", "min", "Cancelado", "Servicio temporalmente no disponible", "Paradas favoritas", "Líneas favoritas", "Elige una parada", "Expandir paradas", "Reducir paradas", "Horarios programados, sujetos a cambios.", "Horarios de la fecha seleccionada", "Recorrido habitual; servicio en esta fecha no confirmado"],
+}
+for language, labels in TRAVEL_COPY.items():
+    COPY[language].update(labels)
+for language, labels in FEATURE_COPY.items():
+    COPY[language].update(zip(FEATURE_KEYS, labels))
 
 _cache: dict[str, tuple[float, object]] = {}
 _auth = {"token": "", "expires_at": 0.0}
@@ -86,10 +134,10 @@ def current_lang():
 def tr(key):
     return COPY[current_lang()].get(key, LEGAL_COPY[current_lang()].get(key, MAP_COPY[current_lang()].get(key, key)))
 
-def api_get(path, params=None):
+def api_get(path, params=None, max_age=180):
     cache_key = path + repr(sorted((params or {}).items()))
     cached = _cache.get(cache_key)
-    if cached and time.time() - cached[0] < 180:
+    if cached and time.time() - cached[0] < max_age:
         return cached[1]
     token = api_token()
     if not token:
@@ -112,7 +160,7 @@ def api_get(path, params=None):
 def rows(data):
     if isinstance(data, list): return data
     if isinstance(data, dict):
-        for key in ("data", "results", "routes", "stops", "departures", "items"):
+        for key in ("data", "results", "routes", "stops", "departures", "items", "shapes", "points"):
             if isinstance(data.get(key), list): return data[key]
     return []
 
@@ -130,7 +178,9 @@ def stop_view(item):
         lon = float(lon_raw)
     except (TypeError, ValueError):
         lon = None
-    return {"id": stop_id, "name": str(name), "lat": lat, "lon": lon, "code": str(get("stop_code", get("stopCode", get("code", stop_id))) or stop_id)}
+    if lat is not None and (not math.isfinite(lat) or abs(lat)>90): lat = None
+    if lon is not None and (not math.isfinite(lon) or abs(lon)>180): lon = None
+    return {"wheelchair": str(get("wheelchair_boarding", get("wheelchairBoarding", "0")) or "0"), "id": stop_id, "name": str(name), "lat": lat, "lon": lon, "code": str(get("stop_code", get("stopCode", get("code", stop_id))) or stop_id)}
 
 def departure_view(item):
     get = item.get
@@ -140,6 +190,7 @@ def departure_view(item):
         "hour": time_value[:2] if len(time_value) >= 5 and time_value[2] == ":" else "",
         "route": str(get("route_short_name", get("routeShortName", get("route_id", get("routeId", "")))) or ""),
         "headsign": str(get("trip_headsign", get("tripHeadsign", get("headsign", get("route_long_name", "")))) or ""),
+        "wheelchair": str(get("wheelchair_accessible", get("wheelchairAccessible", "0")) or "0"),
         "raw": item,
     }
 
@@ -148,7 +199,8 @@ def minutes_of(time_value):
     if len(text) < 5 or text[2] != ":":
         return None
     try:
-        return int(text[:2]) * 60 + int(text[3:5])
+        hour, minute = int(text[:2]), int(text[3:5])
+        return hour * 60 + minute if hour >= 0 and 0 <= minute < 60 else None
     except ValueError:
         return None
 
@@ -227,7 +279,7 @@ def api_token(force=False):
 
 @app.context_processor
 def template_context():
-    return {"t": tr, "content": PAGE_CONTENT[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_connected": bool(API_LOGIN_ID)}
+    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_connected": bool(API_LOGIN_ID)}
 
 @app.get("/lang/<lang>")
 def set_language(lang):
@@ -277,12 +329,10 @@ def city(city_id):
     if not city_info: abort(404)
     routes = [route_view(x) for x in rows(api_get(f"getRoutes/{city_id}"))]
     stops = rows(api_get(f"getStops/{city_id}"))
-    return render_template("city.html", city_id=city_id, city=city_info, routes=routes, stops=stops[:800])
+    return render_template("city.html", city_id=city_id, city=city_info, routes=routes, stops=stops[:100], stop_count=len(stops), selected_date=service_date(city_id).isoformat())
 
-@app.get("/city/<city_id>/line/<path:route_id>")
-def line(city_id, route_id):
-    city_info = CITIES.get(city_id)
-    if not city_info: abort(404)
+def line_data(city_id, route_id, selected_date, direction=""):
+    city_info = CITIES[city_id]
     all_routes = [route_view(x) for x in rows(api_get(f"getRoutes/{city_id}"))]
     route = next((x for x in all_routes if x["id"] == route_id), {"id": route_id, "short": route_id, "name": "", "color": city_info["accent"], "text_color": "#ffffff"})
     direction_rows = rows(api_get(f"getDirectionByRoute/{city_id}/{route_id}"))
@@ -291,15 +341,17 @@ def line(city_id, route_id):
         value = item.get("trip_headsign", item.get("tripHeadsign", item.get("direction", "")))
         if value and value not in directions:
             directions.append(str(value))
-    selected_direction = request.args.get("direction", "").strip()
+    selected_direction = direction.strip()
     if selected_direction not in directions:
         selected_direction = directions[0] if directions else ""
 
-    weekday = date.today().strftime("%A").lower()
+    weekday = selected_date.strftime("%A").lower()
     stop_params = {"direction": selected_direction} if selected_direction else None
-    stops = rows(api_get(f"getStopsByRouteAndDirection/{city_id}/{weekday}/{route_id}", stop_params))
-    if not stops and selected_direction:
-        stops = rows(api_get(f"getStopsByRouteAndDirection/{city_id}/{weekday}/{route_id}"))
+    date_data = api_get(f"getStopsByRouteAndDirectionDate/{city_id}/{selected_date.strftime('%Y%m%d')}/{route_id}", stop_params)
+    stops = rows(date_data)
+    date_confirmed = date_data is not None
+    if date_data is None:
+        stops = rows(api_get(f"getStopsByRouteAndDirection/{city_id}/{weekday}/{route_id}", stop_params))
 
     shape_id = ""
     for stop in stops:
@@ -308,12 +360,32 @@ def line(city_id, route_id):
             break
     shape = rows(api_get(f"getShapeById/{city_id}", {"shapeId": shape_id})) if shape_id else []
 
-    if not stops:
+    if not stops or not shape:
         trips = rows(api_get(f"getTrips/{city_id}/{route_id}"))
+        matching = [trip for trip in trips if not selected_direction or str(trip.get("trip_headsign", trip.get("tripHeadsign", ""))) == selected_direction]
+        trips = matching if selected_direction else trips
         trip_id = str((trips[0] if trips else {}).get("trip_id", (trips[0] if trips else {}).get("tripId", "")))
-        stops = rows(api_get(f"getStopsByTrip/{city_id}/{trip_id}")) if trip_id else []
+        if not stops and not date_confirmed:
+            stops = rows(api_get(f"getStopsByTrip/{city_id}/{trip_id}")) if trip_id else []
         shape = rows(api_get(f"getShapeByTripId/{city_id}", {"tripId": trip_id})) if trip_id else []
-    return render_template("line.html", city_id=city_id, city=city_info, route=route, stops=stops, shape=shape, directions=directions, selected_direction=selected_direction)
+    def sequence(item):
+        try:
+            return float(item.get("stop_sequence", item.get("stopSequence", 0)))
+        except (TypeError, ValueError):
+            return 0
+    stops = sorted(stops, key=sequence)
+    return dict(city_id=city_id, city=city_info, route=route, stops=stops, shape=shape, directions=directions, selected_direction=selected_direction, selected_date=selected_date.isoformat(), date_confirmed=date_confirmed)
+
+@app.get("/city/<city_id>/line/<path:route_id>")
+def line(city_id, route_id):
+    if city_id not in CITIES: abort(404)
+    return render_template("line.html", **line_data(city_id, route_id, service_date(city_id), request.args.get("direction", "")))
+
+@app.get("/api/<city_id>/line/<path:route_id>")
+def line_preview(city_id, route_id):
+    if city_id not in CITIES: abort(404)
+    data = line_data(city_id, route_id, service_date(city_id), request.args.get("direction", ""))
+    return jsonify(data)
 
 @app.get("/city/<city_id>/stop/<path:stop_id>")
 def stop_page(city_id, stop_id):
@@ -327,38 +399,222 @@ def stop_page(city_id, stop_id):
             stop = {**view, "raw": raw}
             break
     if stop is None:
-        stop = {"id": stop_id, "name": stop_id, "lat": None, "lon": None, "code": stop_id}
-    departures_raw = rows(api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": date.today().isoformat(), "limit": 200}))
-    departures = [departure_view(x) if isinstance(x, dict) else {"time": "", "hour": "", "route": "", "headsign": "", "raw": x} for x in departures_raw]
-    upcoming = next_departure_index(departures)
+        stop = {"id": stop_id, "name": stop_id, "lat": None, "lon": None, "code": stop_id, "wheelchair": "0"}
+    selected_date = service_date(city_id)
+    departures_raw = rows(api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": selected_date.strftime("%Y%m%d"), "time": "00:00:00", "limit": 200}))
+    departures = normalized_departures(departures_raw, city_id, selected_date)
+    departures.sort(key=lambda item: minutes_of(item["time"]) if minutes_of(item["time"]) is not None else float("inf"))
+    upcoming = next_departure_index(departures, city_now(city_id)) if selected_date == city_now(city_id).date() else -1
     for position, item in enumerate(departures):
         item["is_next"] = position == upcoming
     grouped = group_timetable(departures)
     routes_here = [route_view(x) for x in rows(api_get(f"getRouteByStopId/{city_id}/{stop_id}"))]
-    return render_template("stop.html", city_id=city_id, city=city_info, stop=stop, grouped=grouped, departures=departures, routes_here=routes_here)
+    return render_template("stop.html", city_id=city_id, city=city_info, stop=stop, grouped=grouped, departures=departures, routes_here=routes_here, selected_date=selected_date.isoformat())
 
+
+def normalized_departures(raw, city_id, selected_date):
+    now = city_now(city_id)
+    reference = now.hour * 60 + now.minute + now.second / 60
+    items = []
+    for value in rows(raw):
+        if not isinstance(value, dict): continue
+        item = departure_view(value)
+        minute = minutes_of(item["time"])
+        item["minutes"] = max(0, math.ceil(minute - reference)) if minute is not None and selected_date == now.date() and minute >= reference else None
+        status = str(value.get("status", value.get("schedule_relationship", ""))).lower()
+        item["cancelled"] = value.get("cancelled") is True or status in {"cancelled", "canceled", "canceled_trip", "3"}
+        minute_seconds = seconds(item["time"])
+        item["departure_at"] = int((datetime.combine(selected_date, datetime.min.time(), tzinfo=now.tzinfo) + timedelta(seconds=minute_seconds)).timestamp()*1000) if minute_seconds is not None else None
+        items.append(item)
+    return sorted(items, key=lambda item: minutes_of(item["time"]) if minutes_of(item["time"]) is not None else float("inf"))
 
 @app.get("/api/<city_id>/departures")
 def departures(city_id):
     if city_id not in CITIES: abort(404)
     stop_id = request.args.get("stop", "").strip()
     if not stop_id: return jsonify({"items": [], "error": "stop_required"}), 400
-    data = api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": request.args.get("date", date.today().isoformat()), "limit": 12})
-    return jsonify({"items": rows(data), "connected": bool(data is not None)})
+    selected_date = service_date(city_id)
+    route_id = request.args.get("route", "")
+    direction = request.args.get("direction", "")
+    if route_id:
+        data = api_get(f"getStopTimeByRouteAndDirectionAndDateAndStopId/{city_id}/{selected_date.strftime('%Y%m%d')}/{route_id}/{stop_id}", {"direction": direction})
+    else:
+        data = api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": selected_date.strftime("%Y%m%d"), "time": city_now(city_id).strftime("%H:%M:%S") if selected_date == city_now(city_id).date() else "00:00:00", "limit": 200})
+    items = normalized_departures(data, city_id, selected_date)
+    if selected_date == city_now(city_id).date():
+        items = [item for item in items if item["minutes"] is not None]
+    return jsonify({"items": items[:3] if route_id else items[:12], "connected": data is not None, "date": selected_date.isoformat(), "timezone": str(city_now(city_id).tzinfo)})
 
 @app.get("/api/<city_id>/stop/<path:stop_id>")
 def stop_details(city_id, stop_id):
-    if city_id not in CITIES:
-        abort(404)
-    routes_data = rows(api_get(f"getRouteByStopId/{city_id}/{stop_id}"))
-    departures_data = rows(api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": date.today().isoformat(), "limit": 60}))
-    departures = [departure_view(x) for x in departures_data if isinstance(x, dict)]
-    return jsonify({
-        "routes": [route_view(item) for item in routes_data],
+    if city_id not in CITIES: abort(404)
+    selected_date = service_date(city_id)
+    routes_data = api_get(f"getRouteByStopId/{city_id}/{stop_id}")
+    departures_data = api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": selected_date.strftime("%Y%m%d"), "time": "00:00:00", "limit": 200})
+    departures = normalized_departures(departures_data, city_id, selected_date)
+    return jsonify({"routes": [route_view(item) for item in rows(routes_data)], "items": departures,
         "times": [item["time"] for item in departures if item["time"]],
-        "next": next_departure_index(departures),
-        "connected": bool(routes_data or departures),
-    })
+        "next": next_departure_index([item for item in departures if item["time"]], city_now(city_id)) if selected_date == city_now(city_id).date() else -1,
+        "connected": departures_data is not None})
+
+@app.get("/api/<city_id>/nearby")
+def nearby_stops(city_id):
+    if city_id not in CITIES: abort(404)
+    try:
+        lat, lon = float(request.args["lat"]), float(request.args["lon"])
+        if not math.isfinite(lat) or not math.isfinite(lon) or abs(lat)>90 or abs(lon)>180: raise ValueError()
+    except (KeyError, ValueError): abort(400)
+    data = api_get(f"getNearbyStops/{city_id}", {"lat": lat, "lon": lon, "radiusMeters": 1000})
+    items = []
+    for raw in rows(data):
+        stop = stop_view(raw)
+        try: distance = float(raw["distance_meters"])
+        except (KeyError, ValueError, TypeError): continue
+        if not math.isfinite(distance) or distance < 0 or distance > 1000: continue
+        items.append({**stop, "distance": round(distance), "walk_minutes": max(1, math.ceil(distance / 75))})
+    return jsonify(items=sorted(items, key=lambda item:item["distance"]), connected=data is not None)
+
+@app.get("/api/<city_id>/alerts")
+def service_alerts(city_id):
+    if city_id not in CITIES: abort(404)
+    # Optional authenticated upstream endpoint; no alert endpoint exists in the default API.
+    path = os.environ.get("MEUBUSAO_ALERTS_PATH", "")
+    if not path: return jsonify(items=[], supported=False, connected=False)
+    data = api_get(path.replace("{city}", city_id))
+    alerts = data.get("alerts", []) if isinstance(data, dict) and isinstance(data.get("alerts"), list) else rows(data)
+    route = request.args.get("route", "")
+    items = []
+    for alert in alerts:
+        if not isinstance(alert, dict): continue
+        route_ids = alert.get("route_ids", [])
+        if isinstance(route_ids, (str, int)): route_ids = [route_ids]
+        if not route_ids and alert.get("route_id") is not None: route_ids = [alert["route_id"]]
+        if route and route_ids and route not in [str(value) for value in route_ids]: continue
+        items.append({"title": str(alert.get("title", alert.get("header_text", ""))), "description": str(alert.get("description", alert.get("description_text", ""))), "severity": str(alert.get("severity", "info"))})
+    return jsonify(items=items, supported=True, connected=data is not None)
+
+
+_planner_cache = {}
+_planner_lock = threading.Lock()
+
+def planner_network(city_id):
+    configured = os.environ.get("MEUBUSAO_GTFS_" + city_id.upper(), "")
+    default = Path(app.root_path) / "gtfs" / "ni-managua-gtfs.zip" if city_id == "Managua_Nicaragua" and not API_LOGIN_ID else None
+    path = Path(configured) if configured else default
+    if configured and not path.is_file(): return None
+    cache_key = (city_id, str(path), path.stat().st_mtime if path and path.is_file() else None)
+    cached = _planner_cache.get(cache_key)
+    if cached and time.time()-cached[0] < 900: return cached[1]
+    # Serialize cold snapshots to avoid duplicate city-wide exports.
+    with _planner_lock:
+        cached = _planner_cache.get(cache_key)
+        if cached and time.time()-cached[0]<900: return cached[1]
+        try:
+            if path and path.is_file():
+                tables = load_zip(path)
+            else:
+                endpoints = {"stops":"getStops", "routes":"getRoutes", "stop_times":"getStopsTime", "calendar":"getCalendar", "calendar_dates":"getCalendarDates"}
+                with ThreadPoolExecutor(max_workers=5) as pool:
+                    futures = {key:pool.submit(api_get, f"{endpoint}/{city_id}") for key,endpoint in endpoints.items()}
+                    responses = {key:future.result() for key,future in futures.items()}
+                if any(responses[key] is None for key in ("stops","routes","stop_times","calendar","calendar_dates")): return None
+                tables = {key:rows(value) for key,value in responses.items()}
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    trips = list(pool.map(lambda route: api_get(f"getTrips/{city_id}/{route.get('route_id',route.get('routeId',''))}"),tables['routes']))
+                if any(value is None for value in trips): return None
+                tables["trips"] = [trip for value in trips for trip in rows(value)]
+                if not tables['stop_times'] or not tables['trips']: return None
+            network = Network(tables)
+        except (OSError, BadZipFile, ValueError, KeyError, TypeError):
+            return None
+        if len(_planner_cache)>=4: _planner_cache.pop(next(iter(_planner_cache)))
+        _planner_cache[cache_key]=(time.time(),network)
+        return network
+
+@app.get("/api/<city_id>/journeys")
+def journeys(city_id):
+    if city_id not in CITIES: abort(404)
+    day = service_date(city_id)
+    start = seconds(request.args.get("time", city_now(city_id).strftime("%H:%M:%S")))
+    origin,destination = request.args.get("from", ""),request.args.get("to", "")
+    if start is None or start>=86400 or not origin or not destination: abort(400)
+    network = planner_network(city_id)
+    if network is None: return jsonify(items=[],connected=False,reason="unavailable")
+    try: result = network.plan(origin,destination,day,start,request.args.get("accessible")=="1")
+    except ValueError: abort(400)
+    for item in result['items']:
+        for leg in item['legs']:
+            stamp = seconds(leg['departure'])
+            leg['departure_at'] = int((datetime.combine(day,datetime.min.time(),tzinfo=city_now(city_id).tzinfo)+timedelta(seconds=stamp)).timestamp()*1000) if stamp is not None else None
+    return jsonify(**result, connected=True, date=day.isoformat(), timezone=str(city_now(city_id).tzinfo))
+
+@app.get("/api/<city_id>/stops")
+def search_stops(city_id):
+    if city_id not in CITIES: abort(404)
+    data=api_get(f"getStops/{city_id}")
+    query=request.args.get("q", "").casefold()
+    import unicodedata
+    normalize=lambda text: ''.join(char for char in unicodedata.normalize('NFD',text.casefold()) if not unicodedata.combining(char))
+    items=[stop_view(raw) for raw in rows(data)]
+    query=normalize(query)
+    items=[stop for stop in items if query in normalize(stop['name']+' '+stop['id'])]
+    return jsonify(items=items[:30],connected=data is not None)
+
+@app.get("/api/<city_id>/map-stops")
+def map_stops(city_id):
+    if city_id not in CITIES: abort(404)
+    try:
+        south,west,north,east=map(float,request.args.get('bounds','-90,-180,90,180').split(','))
+        zoom=int(request.args.get('zoom',12))
+        if not all(math.isfinite(value) for value in (south,west,north,east)) or not -90<=south<=north<=90 or not -180<=west<=east<=180 or not 0<=zoom<=20: raise ValueError()
+    except (ValueError,TypeError): abort(400)
+    data=api_get(f"getStops/{city_id}")
+    groups={}
+    grid=360/(2**zoom)*.16
+    for raw in rows(data):
+        stop=stop_view(raw)
+        if stop['lat'] is None or stop['lon'] is None or not south<=stop['lat']<=north or not west<=stop['lon']<=east: continue
+        key=(int(stop['lat']/grid),int(stop['lon']/grid))
+        groups.setdefault(key,[]).append(stop)
+    items=[]
+    for stops in groups.values():
+        if len(stops)==1:items.append(dict(stops[0],count=1))
+        else:items.append(dict(count=len(stops),lat=sum(stop['lat'] for stop in stops)/len(stops),lon=sum(stop['lon'] for stop in stops)/len(stops),members=stops[:20] if zoom>=18 else [],bounds=[[min(stop['lat'] for stop in stops),min(stop['lon'] for stop in stops)],[max(stop['lat'] for stop in stops),max(stop['lon'] for stop in stops)]]))
+    # Bounded rendering even for unusual requests spanning very large networks.
+    return jsonify(items=items[:800],connected=data is not None,total=sum(item['count'] for item in items),truncated=len(items)>800)
+
+@app.get("/api/<city_id>/vehicles")
+def vehicles(city_id):
+    if city_id not in CITIES: abort(404)
+    path=os.environ.get('MEUBUSAO_VEHICLES_PATH','')
+    if not path:return jsonify(items=[],supported=False,connected=False)
+    data=api_get(path.replace('{city}',city_id),max_age=10)
+    vehicle_rows=data.get('vehicles',[]) if isinstance(data,dict) and isinstance(data.get('vehicles'),list) else rows(data)
+    route=request.args.get('route','')
+    items=[]
+    for raw in vehicle_rows:
+        if not isinstance(raw,dict):continue
+        stop=stop_view(raw)
+        rid=str(raw.get('route_id',raw.get('routeId','')))
+        try: updated=float(raw.get('timestamp',0))
+        except (ValueError,TypeError):continue
+        age=time.time()-updated
+        if stop['lat'] is None or stop['lon'] is None or not math.isfinite(updated) or age>120 or age < -30 or (route and rid!=route):continue
+        items.append(dict(id=str(raw.get('vehicle_id',raw.get('id',''))),lat=stop['lat'],lon=stop['lon'],route=rid,label=str(raw.get('label',rid)),timestamp=updated,wheelchair=str(raw.get('wheelchair_accessible','0'))))
+    response=jsonify(items=items,supported=True,connected=data is not None)
+    response.headers['Cache-Control']='no-store'
+    return response
+
+@app.get('/sw.js')
+def service_worker():
+    response=send_from_directory(app.static_folder,'sw.js')
+    response.headers['Cache-Control']='no-cache'
+    response.headers['Service-Worker-Allowed']='/'
+    return response
+
+@app.get('/offline')
+def offline_page():
+    return render_template('offline.html')
 
 @app.get("/health")
 def health():
