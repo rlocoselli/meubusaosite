@@ -35,7 +35,7 @@ const cookieBanner=document.getElementById('cookieBanner');
 const cookieOptions=document.getElementById('cookieOptions');
 const cookieSave=document.getElementById('cookieSave');
 const cookieCustomize=document.getElementById('cookieCustomize');
-function saveConsent(optional){localStorage.setItem(consentKey,JSON.stringify({essential:true,optional,updated:new Date().toISOString()}));cookieBanner.hidden=true;document.documentElement.dataset.externalConsent=optional?'granted':'denied'}
+function saveConsent(optional){const wasGranted=document.documentElement.dataset.externalConsent==='granted';localStorage.setItem(consentKey,JSON.stringify({essential:true,optional,updated:new Date().toISOString()}));cookieBanner.hidden=true;document.documentElement.dataset.externalConsent=optional?'granted':'denied';if(wasGranted&&!optional){location.reload();return}window.dispatchEvent(new Event('externalconsentchange'))}
 function openCookieSettings(){cookieBanner.hidden=false;cookieOptions.hidden=false;cookieSave.hidden=false;cookieCustomize.hidden=true;const saved=JSON.parse(localStorage.getItem(consentKey)||'{}');document.getElementById('optionalCookies').checked=Boolean(saved.optional)}
 try{const saved=JSON.parse(localStorage.getItem(consentKey)||'null');if(!saved)cookieBanner.hidden=false;else document.documentElement.dataset.externalConsent=saved.optional?'granted':'denied'}catch(e){cookieBanner.hidden=false}
 document.querySelectorAll('[data-consent]').forEach(button=>button.addEventListener('click',()=>saveConsent(button.dataset.consent==='all')));

@@ -19,6 +19,18 @@ The default API does not publish service alerts. To connect an authenticated ale
 
 Run regression checks with `.venv/bin/python -m unittest discover -s tests -v`.
 
+## Website ads
+
+The site uses AdSense publisher `ca-pub-6158185990205930` (also listed in `/ads.txt`). No slot IDs are needed for Auto ads: enable Auto ads for this site in AdSense, and the site loads its publisher code on home, city, line, stop, and journey pages after optional consent. Google chooses the Auto ad positions. If you want the fixed placements in this repository instead, create three responsive display ad units in AdSense and set their numeric slot IDs before starting Flask:
+
+```bash
+export ADSENSE_SLOT_HOME='your-home-slot-id'
+export ADSENSE_SLOT_CITY='your-city-slot-id'
+export ADSENSE_SLOT_TIMETABLE='your-timetable-slot-id'
+```
+
+The home unit sits after the city browser; the city unit follows the departure and alert sections; the timetable unit appears between line departures and the map, or after the stop timetable or journey planner. Missing slot IDs omit only those fixed units; Auto ads can still appear when enabled in AdSense. `ADSENSE_CLIENT` can override the publisher ID if ownership changes; update `ads.txt` at the same time. The AdSense script loads only after the visitor accepts optional content. Ads do not load in offline mode, on utility pages, or on legal pages. Configure a Google-certified TCF consent management platform for visitors in the EEA, UK, and Switzerland before serving personalized ads there; the site's existing optional-content choice is not a certified CMP.
+
 City pages prioritize departure times, lines, and maps. Journey planning has its own URL, `/city/<city_id>/plan`; older city links containing journey inputs redirect there while preserving the query.
 
 Travel tools now include share links (city, route, direction, stop, service date, and planner inputs), stop/vehicle accessibility, saved schedules, and departure reminders. The planner searches direct rides and up to two transfers over a 12-hour horizon. It respects calendars, date exceptions, pickup/drop-off restrictions, and a minimum two-minute connection buffer. Coordinate approaches (up to 800 m) and transfers between stops (up to 250 m) use approximate straight-line walking distances. Wheelchair-only searches require explicitly accessible boarding/alighting stops and trips, and exclude unverified walking paths. Frequency-based trips and trip-specific transfer rules are not inferred; feeds using the latter report planning as unavailable.

@@ -39,6 +39,7 @@
     </div>
   </aside>
 </section>
+{% set placement = 'timetable' %}{% include 'ad_unit.html' %}
 {% endblock %}
 {% block scripts %}<script>
 document.getElementById('timetableSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.timetable-group').forEach(g=>{g.hidden=!g.dataset.search.includes(q)})});
