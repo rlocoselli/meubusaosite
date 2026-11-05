@@ -15,7 +15,7 @@ function initLineMap(lat,lon,color){
  const points=[...path,...located.map(x=>x.point)];
  const fitOptions={paddingTopLeft:[55,55],paddingBottomRight:[55,90],maxZoom:15,animate:false};
  const map=L.map(el,{zoomControl:false,preferCanvas:true});
- if(points.length)map.fitBounds(L.latLngBounds(points),fitOptions);else map.setView([lat,lon],12);
+ if(points.length){const routeBounds=L.latLngBounds(points);map.fitBounds(routeBounds,fitOptions);map.setView(routeBounds.getCenter(),Math.min(map.getZoom()+2,15),{animate:false})}else map.setView([lat,lon],12);
  window.transitLineMap=map;tile(map);L.control.zoom({position:'bottomright'}).addTo(map);startVehicles(map,document.querySelector('[data-vehicles-city]'));
  document.getElementById('routeGeometryLabel').textContent=path.length>1?(exact?el.dataset.exact:el.dataset.approximate):el.dataset.timetable;
  if(path.length>1){L.polyline(path,{color:'#fff',weight:10,opacity:.9}).addTo(map);L.polyline(path,{color,weight:6,opacity:.95,dashArray:exact?null:'8 10'}).addTo(map)}

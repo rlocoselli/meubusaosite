@@ -70,6 +70,10 @@
 .line-page>.line-departures{order:5}
 .line-page>.route-date-notice{order:6}
 .line-page>.ad-placement{order:7}
+.line-page>.line-layout{height:calc(100dvh - 210px);min-height:350px}
+.line-page .line-map .map{min-height:0}
+.line-page .stop-card{min-height:0;overflow-y:auto}
+@media(max-width:900px){.line-page>.line-layout{height:auto;min-height:0}.line-page .stop-card{overflow:auto}}
 .developer-hero{display:grid;align-items:center;justify-content:normal;overflow:hidden}
 .developer-hero .developer-console{width:100%}
 @media(max-width:900px){.developer-hero{grid-template-columns:1fr}}
