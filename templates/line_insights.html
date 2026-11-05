@@ -1,0 +1,16 @@
+<section class="line-insights" data-insights-city="{{ city_id }}" data-insights-route="{{ route.id if route is defined else '' }}" aria-labelledby="insightsTitle">
+  <div class="line-insights-heading">
+    <div>
+      <p class="eyebrow dark"><span></span>{{ insights_copy.eyebrow }}</p>
+      <h2 id="insightsTitle">{{ insights_copy.line_title if route is defined else insights_copy.title }}</h2>
+      <p>{{ insights_copy.intro }}</p>
+    </div>
+    <div class="realtime-panel">
+      <strong><i></i>{{ insights_copy.realtime }}</strong>
+      <div class="realtime-feed-pills" data-realtime-feeds role="status">{{ insights_copy.unavailable }}</div>
+    </div>
+  </div>
+  <div class="line-insights-kpis" data-insights-kpis></div>
+  <div class="line-insights-routes" data-insights-routes aria-live="polite">{{ insights_copy.unavailable }}</div>
+  <p class="line-insights-note">{{ insights_copy.source_note }}</p>
+</section>

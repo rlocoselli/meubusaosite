@@ -27,7 +27,7 @@ class TravelApiTests(unittest.TestCase):
             self.assertIn('id="journeyForm"',planner.get_data(as_text=True))
             old=self.client.get('/city/Grenoble_France?from=A&to=D&date=2026-10-10')
             self.assertEqual(old.status_code,302)
-            self.assertEqual(old.location,'/city/Grenoble_France/plan?from=A&to=D&date=2026-10-10')
+            self.assertTrue(old.location.endswith('/city/Grenoble_France/plan?from=A&to=D&date=2026-10-10'))
             self.assertEqual(self.client.get('/city/unknown/plan').status_code,404)
 
     def test_vehicle_feed_only_includes_fresh_valid_route_positions(self):

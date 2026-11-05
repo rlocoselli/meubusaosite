@@ -1,5 +1,6 @@
 {% extends 'base.html' %}{% block title %}{{ t('line') }} {{ route.short }} · {{ city.name }}{% endblock %}
 {% block content %}<section class="line-head" style="--line:{{ route.color }}"><a class="back" href="{{ url_for('city', city_id=city_id) }}">← {{ city.name }}</a><div class="line-badge" style="background:{{ route.color }};color:{{ route.text_color }}">{{ route.short }}</div><div><p>{{ t('line') }}</p><h1>{{ route.name or t('line') ~ ' ' ~ route.short }}</h1><span>{{ city.name }} · {{ city.country }}</span></div><button class="line-favorite favorite-button" type="button" aria-label="{{ t('add_favorite') }}" data-favorite='{{ {"id":route.id,"city":city_id,"cityName":city.name,"short":route.short,"name":route.name,"color":route.color,"textColor":route.text_color}|tojson }}'>☆ <span>{{ t('add_favorite') }}</span></button></section>
+{% include 'line_insights.html' %}
 {% include 'travel_actions.html' %}
 {% include 'alerts.html' %}
 <form class="service-controls" method="get"><label>{{ t('service_date') }}<input type="date" name="date" value="{{ selected_date }}" required></label><input name="direction" type="hidden" value="{{ selected_direction }}"><button class="btn dark" type="submit">{{ t('find_departures') }}</button><span>{{ t('scheduled_notice') }}</span></form>

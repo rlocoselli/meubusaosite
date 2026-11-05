@@ -213,6 +213,14 @@ def api_get(path, params=None, max_age=180):
             return None
     return None
 
+
+INSIGHTS_COPY = {
+    "pt-br": {"eyebrow":"Dados das linhas", "title":"O movimento da rede", "line_title":"Esta linha em números", "intro":"Medições recebidas nos últimos 30 dias. Os totais refletem apenas os dados informados.", "realtime":"GTFS em tempo real", "observations":"Observações", "boardings":"Embarques", "alightings":"Desembarques", "occupancy":"Ocupação média", "trips":"Viagens identificadas", "last":"Última observação", "direction":"Sentido", "view_line":"Ver linha", "no_data":"Ainda não há medições para estas linhas.", "unavailable":"Indicadores indisponíveis agora.", "not_configured":"Sem feed configurado", "ok":"Disponível", "empty":"Sem eventos agora", "stale":"Desatualizado", "error":"Indisponível", "no_timestamp":"Sem horário do feed", "tripUpdates":"Horários", "vehiclePositions":"Veículos", "serviceAlerts":"Alertas", "source_note":"Dados observados; não representam a cobertura total da rede.", "refresh":"Atualizado"},
+    "fr": {"eyebrow":"Données des lignes", "title":"Le réseau en mouvement", "line_title":"Cette ligne en chiffres", "intro":"Mesures reçues ces 30 derniers jours. Les totaux reflètent uniquement les données fournies.", "realtime":"GTFS en temps réel", "observations":"Observations", "boardings":"Montées", "alightings":"Descentes", "occupancy":"Occupation moyenne", "trips":"Trajets identifiés", "last":"Dernière observation", "direction":"Direction", "view_line":"Voir la ligne", "no_data":"Aucune mesure pour ces lignes.", "unavailable":"Indicateurs indisponibles actuellement.", "not_configured":"Flux non configuré", "ok":"Disponible", "empty":"Aucun événement actuellement", "stale":"Ancien", "error":"Indisponible", "no_timestamp":"Horodatage absent", "tripUpdates":"Horaires", "vehiclePositions":"Véhicules", "serviceAlerts":"Alertes", "source_note":"Données observées ; elles ne couvrent pas nécessairement tout le réseau.", "refresh":"Mis à jour"},
+    "it": {"eyebrow":"Dati delle linee", "title":"La rete in movimento", "line_title":"Questa linea in numeri", "intro":"Misurazioni ricevute negli ultimi 30 giorni. I totali riflettono solo i dati comunicati.", "realtime":"GTFS in tempo reale", "observations":"Osservazioni", "boardings":"Salite", "alightings":"Discese", "occupancy":"Occupazione media", "trips":"Corse identificate", "last":"Ultima osservazione", "direction":"Direzione", "view_line":"Apri linea", "no_data":"Nessuna misurazione per queste linee.", "unavailable":"Indicatori non disponibili al momento.", "not_configured":"Feed non configurato", "ok":"Disponibile", "empty":"Nessun evento ora", "stale":"Non aggiornato", "error":"Non disponibile", "no_timestamp":"Orario del feed assente", "tripUpdates":"Orari", "vehiclePositions":"Veicoli", "serviceAlerts":"Avvisi", "source_note":"Dati osservati; potrebbero non coprire tutta la rete.", "refresh":"Aggiornato"},
+    "es": {"eyebrow":"Datos de las líneas", "title":"La red en movimiento", "line_title":"Esta línea en cifras", "intro":"Mediciones recibidas en los últimos 30 días. Los totales reflejan solo los datos comunicados.", "realtime":"GTFS en tiempo real", "observations":"Observaciones", "boardings":"Subidas", "alightings":"Bajadas", "occupancy":"Ocupación media", "trips":"Viajes identificados", "last":"Última observación", "direction":"Sentido", "view_line":"Ver línea", "no_data":"Todavía no hay mediciones para estas líneas.", "unavailable":"Indicadores no disponibles ahora.", "not_configured":"Feed sin configurar", "ok":"Disponible", "empty":"Sin eventos ahora", "stale":"Desactualizado", "error":"No disponible", "no_timestamp":"Sin hora del feed", "tripUpdates":"Horarios", "vehiclePositions":"Vehículos", "serviceAlerts":"Alertas", "source_note":"Datos observados; no representan toda la cobertura de la red.", "refresh":"Actualizado"},
+}
+
 def rows(data):
     if isinstance(data, list): return data
     if isinstance(data, dict):
@@ -340,8 +348,8 @@ def template_context():
     ad_client = os.environ.get("ADSENSE_CLIENT", "ca-pub-6158185990205930").strip()
     ad_slots = {name: os.environ.get(f"ADSENSE_SLOT_{name.upper()}", "").strip() for name in ("home", "city", "timetable")}
     ads_allowed = request.endpoint in {"home", "city", "line", "stop_page", "journey_page"}
-    asset_versions = {name: (Path(app.static_folder) / name).stat().st_mtime_ns for name in ("css/app.css", "js/app.js")}
-    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "developer_copy": DEVELOPER_COPY[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed, "asset_versions": asset_versions}
+    asset_versions = {name: (Path(app.static_folder) / name).stat().st_mtime_ns for name in ("css/app.css", "js/app.js", "js/insights.js")}
+    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "developer_copy": DEVELOPER_COPY[current_lang()], "insights_copy": INSIGHTS_COPY[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed, "asset_versions": asset_versions}
 
 @app.get("/lang/<lang>")
 def set_language(lang):
@@ -562,11 +570,10 @@ def nearby_stops(city_id):
 @app.get("/api/<city_id>/alerts")
 def service_alerts(city_id):
     if city_id not in CITIES: abort(404)
-    # Optional authenticated upstream endpoint; no alert endpoint exists in the default API.
-    path = os.environ.get("MEUBUSAO_ALERTS_PATH", "")
+    path = os.environ.get("MEUBUSAO_ALERTS_PATH", "getRealtimeAlerts/{city}")
     if not path: return jsonify(items=[], supported=False, connected=False)
-    data = api_get(path.replace("{city}", city_id))
-    alerts = data.get("alerts", []) if isinstance(data, dict) and isinstance(data.get("alerts"), list) else rows(data)
+    data = api_get(path.replace("{city}", city_id), {"lang": current_lang().split("-")[0]}, max_age=30)
+    alerts = data.get("items", data.get("alerts", [])) if isinstance(data, dict) else rows(data)
     route = request.args.get("route", "")
     items = []
     for alert in alerts:
@@ -576,7 +583,29 @@ def service_alerts(city_id):
         if not route_ids and alert.get("route_id") is not None: route_ids = [alert["route_id"]]
         if route and route_ids and route not in [str(value) for value in route_ids]: continue
         items.append({"title": str(alert.get("title", alert.get("header_text", ""))), "description": str(alert.get("description", alert.get("description_text", ""))), "severity": str(alert.get("severity", "info"))})
-    return jsonify(items=items, supported=True, connected=data is not None)
+    return jsonify(items=items, supported=bool(data.get("supported", True)) if isinstance(data, dict) else data is not None,
+                   connected=bool(data.get("connected", True)) if isinstance(data, dict) else data is not None)
+
+
+@app.get("/api/<city_id>/insights")
+def city_line_insights(city_id):
+    if city_id not in CITIES: abort(404)
+    params = {"routeId": request.args["route"]} if request.args.get("route") else None
+    data = api_get(f"insights/lines/{city_id}", params=params, max_age=300)
+    if not isinstance(data, dict):
+        return jsonify(connected=False, available=False, items=[])
+    return jsonify(connected=True, available=bool(data.get("available")), periodStart=data.get("periodStart"),
+                   items=data.get("items", []) if isinstance(data.get("items"), list) else [])
+
+
+@app.get("/api/<city_id>/realtime-status")
+def city_realtime_status(city_id):
+    if city_id not in CITIES: abort(404)
+    data = api_get(f"insights/realtime/{city_id}", max_age=30)
+    if not isinstance(data, dict):
+        return jsonify(connected=False, status="error", feeds=[])
+    return jsonify(connected=True, status=data.get("status", "error"),
+                   feeds=data.get("feeds", []) if isinstance(data.get("feeds"), list) else [])
 
 
 _planner_cache = {}
@@ -671,10 +700,10 @@ def map_stops(city_id):
 @app.get("/api/<city_id>/vehicles")
 def vehicles(city_id):
     if city_id not in CITIES: abort(404)
-    path=os.environ.get('MEUBUSAO_VEHICLES_PATH','')
+    path=os.environ.get('MEUBUSAO_VEHICLES_PATH','getRealtimeVehicles/{city}')
     if not path:return jsonify(items=[],supported=False,connected=False)
     data=api_get(path.replace('{city}',city_id),max_age=10)
-    vehicle_rows=data.get('vehicles',[]) if isinstance(data,dict) and isinstance(data.get('vehicles'),list) else rows(data)
+    vehicle_rows=data.get('items',data.get('vehicles',[])) if isinstance(data,dict) else rows(data)
     route=request.args.get('route','')
     items=[]
     for raw in vehicle_rows:
@@ -686,7 +715,8 @@ def vehicles(city_id):
         age=time.time()-updated
         if stop['lat'] is None or stop['lon'] is None or not math.isfinite(updated) or age>120 or age < -30 or (route and rid!=route):continue
         items.append(dict(id=str(raw.get('vehicle_id',raw.get('id',''))),lat=stop['lat'],lon=stop['lon'],route=rid,label=str(raw.get('label',rid)),timestamp=updated,wheelchair=str(raw.get('wheelchair_accessible','0'))))
-    response=jsonify(items=items,supported=True,connected=data is not None)
+    response=jsonify(items=items,supported=bool(data.get('supported',True)) if isinstance(data,dict) else data is not None,
+                     connected=bool(data.get('connected',True)) if isinstance(data,dict) else data is not None)
     response.headers['Cache-Control']='no-store'
     return response
 
