@@ -340,7 +340,8 @@ def template_context():
     ad_client = os.environ.get("ADSENSE_CLIENT", "ca-pub-6158185990205930").strip()
     ad_slots = {name: os.environ.get(f"ADSENSE_SLOT_{name.upper()}", "").strip() for name in ("home", "city", "timetable")}
     ads_allowed = request.endpoint in {"home", "city", "line", "stop_page", "journey_page"}
-    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "developer_copy": DEVELOPER_COPY[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed}
+    asset_versions = {name: (Path(app.static_folder) / name).stat().st_mtime_ns for name in ("css/app.css", "js/app.js")}
+    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "developer_copy": DEVELOPER_COPY[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed, "asset_versions": asset_versions}
 
 @app.get("/lang/<lang>")
 def set_language(lang):

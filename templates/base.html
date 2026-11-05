@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=asset_versions['css/app.css']) }}">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -25,7 +25,7 @@
   <script id="travelCopy" type="application/json">{{ travel_copy|tojson }}</script>
   <script id="transitCopy" type="application/json">{{ dict(service_date=t('service_date'),preview_route=t('preview_route'),open_line=t('open_line'),nearby_stops=t('nearby_stops'),find_nearby=t('find_nearby'),distance_hint=t('distance_hint'),no_nearby=t('no_nearby'),alerts_unavailable=t('alerts_unavailable'),no_alerts=t('no_alerts'),minutes=t('minutes'),cancelled=t('cancelled'),unavailable=t('unavailable'),no_upcoming=t('no_upcoming'),loading=t('loading'),location_error=t('location_error'),timetable=t('timetable'),add_favorite=t('add_favorite'),remove_favorite=t('remove_favorite'),approximate_route=t('approximate_route'),itinerary=t('itinerary'),date_fallback=t('date_fallback'),expand_stops=t('expand_stops'),collapse_stops=t('collapse_stops'),direction=t('direction'))|tojson }}</script>
   <script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js', v=asset_versions['js/app.js']) }}"></script>
   <script src="{{ url_for('static', filename='js/ads.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/transit.js') }}"></script>
   <script src="{{ url_for('static', filename='js/travel.js') }}"></script>
