@@ -13,7 +13,9 @@ flask --app app run
 
 Despite its historical variable name, `MEUBUSAO_API_TOKEN` contains the legacy login identifier (username), not the API token returned by the service. Flask sends it as the `id` header to `/login`, stores the resulting token in server memory, renews it automatically when it expires or is rejected, and never exposes either value to the browser. The login identifier is optional for previewing the city experience but required for live routes, stops, shapes, and departures. Override the API with `MEUBUSAO_API_URL` if needed.
 
-For an individual credential, create a developer key at `https://mybusaoservice.audeladedonnees.fr/developer` and set `MEUBUSAO_API_KEY` on the website server. It takes precedence over `MEUBUSAO_API_TOKEN`, stays on the server, and is sent as the `token` request header. The website navigation and footer link to the key portal.
+For an individual credential, create a developer key at `https://mybusaoservice.audeladedonnees.fr/developer` and set `MEUBUSAO_API_KEY` on the website server. It takes precedence over `MEUBUSAO_API_TOKEN`, stays on the server, and is sent as the `token` request header. The website navigation and footer link to the developers page.
+
+The public `/developers` page explains account creation, one-time key display, the `X-API-Key` header, limits, and revocation in the website's four languages. The top menu and mobile header link to this page; its call to action opens the key portal in the selected language. Legacy `/login` remains available for existing clients.
 
 Line and stop pages support a service date, and departures use each city's local time zone. Nearby-stop location is requested only when the visitor selects **Find nearby**; distances are straight-line measurements and walking times are estimates. Saved lines and stops remain in the visitor's browser.
 

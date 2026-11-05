@@ -33,6 +33,61 @@ API_LOGIN_ID = os.environ.get("MEUBUSAO_API_TOKEN", "")
 API_KEY = os.environ.get("MEUBUSAO_API_KEY", "")
 LANGUAGES = ("pt-br", "fr", "it", "es")
 
+DEVELOPER_COPY = {
+    "pt-br": {
+        "menu": "Desenvolvedores", "kicker": "Meu Busão · API", "title": "Dados de mobilidade para construir mais.",
+        "intro": "Crie uma chave individual para consultar linhas, pontos e horários do Meu Busão em seu próprio projeto.",
+        "cta": "Criar minha chave", "docs": "Ver documentação da API", "steps_title": "Como criar uma chave",
+        "steps": [
+            ("01", "Crie sua conta", "Abra o portal de desenvolvedores e escolha um usuário e uma senha com pelo menos 12 caracteres."),
+            ("02", "Gere a chave", "Entre na conta, dê um nome ao projeto e gere a chave. Copie-a na hora: ela será mostrada apenas uma vez."),
+            ("03", "Use e gerencie", "Envie a chave no cabeçalho X-API-Key das consultas. Você pode revogá-la e gerar outra no portal."),
+        ],
+        "example_title": "Sua primeira consulta", "example_note": "Substitua API_KEY pela chave gerada. Guarde-a no servidor, nunca em JavaScript público ou na URL.",
+        "limits_title": "O que a chave permite", "limits": "Até 3 chaves ativas por conta e 120 consultas por minuto por chave. Elas servem apenas para leitura de dados de transporte; o dashboard administrativo exige uma conta separada.",
+        "legacy_title": "Já usa o login antigo?", "legacy": "O endpoint /login com o identificador legado continua disponível para clientes existentes. Novos projetos podem criar sua própria chave no portal de desenvolvedores.",
+    },
+    "fr": {
+        "menu": "Développeurs", "kicker": "Meu Busão · API", "title": "Des données de mobilité pour aller plus loin.",
+        "intro": "Créez une clé individuelle pour consulter les lignes, arrêts et horaires de Meu Busão dans votre projet.",
+        "cta": "Créer ma clé", "docs": "Voir la documentation API", "steps_title": "Comment créer une clé",
+        "steps": [
+            ("01", "Créez votre compte", "Ouvrez le portail développeur et choisissez un identifiant et un mot de passe d’au moins 12 caractères."),
+            ("02", "Générez la clé", "Connectez-vous, nommez votre projet et générez la clé. Copiez-la aussitôt : elle ne sera affichée qu’une fois."),
+            ("03", "Utilisez et gérez", "Envoyez la clé dans l’en-tête X-API-Key. Vous pouvez la révoquer et en créer une autre dans le portail."),
+        ],
+        "example_title": "Votre première requête", "example_note": "Remplacez API_KEY par votre clé. Gardez-la côté serveur, jamais dans du JavaScript public ni dans une URL.",
+        "limits_title": "Ce que permet la clé", "limits": "Jusqu’à 3 clés actives par compte et 120 requêtes par minute et par clé. Elles ne lisent que les données de transport ; le tableau de bord exige un compte administrateur distinct.",
+        "legacy_title": "Vous utilisez déjà l’ancien login ?", "legacy": "L’endpoint /login avec l’identifiant historique reste disponible pour les clients existants. Les nouveaux projets peuvent créer leur propre clé dans le portail développeur.",
+    },
+    "it": {
+        "menu": "Sviluppatori", "kicker": "Meu Busão · API", "title": "Dati di mobilità per creare di più.",
+        "intro": "Crea una chiave personale per consultare linee, fermate e orari di Meu Busão nel tuo progetto.",
+        "cta": "Crea la mia chiave", "docs": "Vedi la documentazione API", "steps_title": "Come creare una chiave",
+        "steps": [
+            ("01", "Crea il tuo account", "Apri il portale sviluppatori e scegli un nome utente e una password di almeno 12 caratteri."),
+            ("02", "Genera la chiave", "Accedi, dai un nome al progetto e genera la chiave. Copiala subito: verrà mostrata una sola volta."),
+            ("03", "Usa e gestisci", "Invia la chiave nell’intestazione X-API-Key. Puoi revocarla e crearne un’altra nel portale."),
+        ],
+        "example_title": "La tua prima richiesta", "example_note": "Sostituisci API_KEY con la tua chiave. Conservala sul server, mai nel JavaScript pubblico o nell’URL.",
+        "limits_title": "Cosa consente la chiave", "limits": "Fino a 3 chiavi attive per account e 120 richieste al minuto per chiave. Consentono solo la lettura dei dati di trasporto; la dashboard richiede un account amministratore separato.",
+        "legacy_title": "Usi già il vecchio login?", "legacy": "L’endpoint /login con l’identificatore precedente resta disponibile per i client esistenti. I nuovi progetti possono creare la propria chiave nel portale sviluppatori.",
+    },
+    "es": {
+        "menu": "Desarrolladores", "kicker": "Meu Busão · API", "title": "Datos de movilidad para crear más.",
+        "intro": "Crea una clave individual para consultar líneas, paradas y horarios de Meu Busão en tu proyecto.",
+        "cta": "Crear mi clave", "docs": "Ver documentación de la API", "steps_title": "Cómo crear una clave",
+        "steps": [
+            ("01", "Crea tu cuenta", "Abre el portal de desarrolladores y elige un usuario y una contraseña de al menos 12 caracteres."),
+            ("02", "Genera la clave", "Entra, da nombre al proyecto y genera la clave. Cópiala enseguida: solo se mostrará una vez."),
+            ("03", "Usa y gestiona", "Envía la clave en la cabecera X-API-Key. Puedes revocarla y crear otra en el portal."),
+        ],
+        "example_title": "Tu primera consulta", "example_note": "Sustituye API_KEY por tu clave. Guárdala en el servidor, nunca en JavaScript público ni en la URL.",
+        "limits_title": "Qué permite la clave", "limits": "Hasta 3 claves activas por cuenta y 120 consultas por minuto por clave. Solo sirven para leer datos de transporte; el panel requiere una cuenta de administrador separada.",
+        "legacy_title": "¿Ya usas el login anterior?", "legacy": "El endpoint /login con el identificador antiguo sigue disponible para clientes existentes. Los proyectos nuevos pueden crear su propia clave en el portal de desarrolladores.",
+    },
+}
+
 CITIES = {
     "Grenoble_France": {"name": "Grenoble", "country": "France", "lat": 45.1885, "lon": 5.7245, "photo": "/static/img/cities/grenoble.jpg", "accent": "#3267e3"},
     "Fortaleza_Brazil": {"name": "Fortaleza", "country": "Brasil", "lat": -3.7319, "lon": -38.5267, "photo": "/static/img/cities/fortaleza.jpg", "accent": "#f59e0b"},
@@ -285,8 +340,7 @@ def template_context():
     ad_client = os.environ.get("ADSENSE_CLIENT", "ca-pub-6158185990205930").strip()
     ad_slots = {name: os.environ.get(f"ADSENSE_SLOT_{name.upper()}", "").strip() for name in ("home", "city", "timetable")}
     ads_allowed = request.endpoint in {"home", "city", "line", "stop_page", "journey_page"}
-    key_labels = {"pt-br": "Criar chave API", "fr": "Créer une clé API", "it": "Crea chiave API", "es": "Crear clave API"}
-    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_key_label": key_labels[current_lang()], "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed}
+    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "developer_copy": DEVELOPER_COPY[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed}
 
 @app.get("/lang/<lang>")
 def set_language(lang):
@@ -309,6 +363,10 @@ def team_page():
 @app.get("/my-space")
 def my_space():
     return render_template("my_space.html")
+
+@app.get("/developers")
+def developers_page():
+    return render_template("developers.html")
 
 @app.get("/about.html")
 def about_page():

@@ -28,3 +28,23 @@
 .ad-label{display:block;margin-bottom:12px;color:#607179;font:600 10px 'DM Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase}
 .ad-placement .adsbygoogle{width:100%}
 @media(max-width:600px){.ad-placement{margin:22px auto;padding:10px 20px 16px;min-height:100px}}
+/* Developer documentation */
+.developer-mobile-link{display:none}
+.topbar nav a[aria-current=page]{color:var(--lime);opacity:1}
+.developer-hero{min-height:500px}
+.developer-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+.developer-content{max-width:1250px;margin:auto;padding:90px 24px}
+.developer-content .section-heading{margin-bottom:35px}
+.developer-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.developer-steps article{background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px}
+.developer-steps article span{display:inline-grid;place-items:center;width:44px;height:44px;background:var(--lime);border-radius:12px;font:800 14px Manrope;margin-bottom:28px}
+.developer-steps h3{font-size:22px;letter-spacing:-.03em}
+.developer-steps p,.developer-info p,.developer-example p{font-size:14px;line-height:1.7;color:var(--muted);margin-bottom:0}
+.developer-example{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;margin-top:24px;background:#e9f1e5;border-radius:20px;padding:40px}
+.developer-example h2{font-size:clamp(28px,4vw,42px);letter-spacing:-.04em}
+.developer-example pre{max-width:100%;overflow:auto;background:var(--ink);color:#eaffc3;border-radius:13px;padding:24px;font-size:12px;line-height:1.7}
+.developer-info{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:24px}
+.developer-info article{border-top:2px solid #1a705e;padding:22px 0}
+.developer-info h3{font-size:22px}
+@media(max-width:900px){.developer-mobile-link{display:inline-flex;padding:9px 12px;border:1px solid #ffffff45;border-radius:9px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap}.developer-steps{grid-template-columns:1fr}.developer-example{grid-template-columns:1fr}}
+@media(max-width:560px){.topbar .developer-mobile-link{font-size:11px;padding:8px}.developer-content{padding:60px 18px}.developer-example{padding:25px}.developer-example pre{padding:15px}}

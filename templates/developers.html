@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}{{ developer_copy.menu }} · Meu Busão{% endblock %}
+{% block content %}
+<section class="public-hero developer-hero">
+  <p class="eyebrow"><span></span>{{ developer_copy.kicker }}</p>
+  <h1>{{ developer_copy.title }}</h1>
+  <p>{{ developer_copy.intro }}</p>
+  <div class="developer-actions">
+    <a class="btn lime" href="{{ api_keys_url }}">{{ developer_copy.cta }} →</a>
+    <a class="btn ghost" href="{{ api_docs }}" target="_blank" rel="noopener">{{ developer_copy.docs }} ↗</a>
+  </div>
+</section>
+<section class="developer-content">
+  <div class="section-heading"><div><p class="eyebrow dark"><span></span>API</p><h2>{{ developer_copy.steps_title }}</h2></div></div>
+  <div class="developer-steps">
+    {% for number, title, description in developer_copy.steps %}
+    <article><span>{{ number }}</span><h3>{{ title }}</h3><p>{{ description }}</p></article>
+    {% endfor %}
+  </div>
+  <div class="developer-example">
+    <div><p class="eyebrow dark"><span></span>HTTPS</p><h2>{{ developer_copy.example_title }}</h2><p>{{ developer_copy.example_note }}</p></div>
+    <pre><code>curl -H 'X-API-Key: API_KEY' \
+  https://mybusaoservice.audeladedonnees.fr/getRoutes/Grenoble_France</code></pre>
+  </div>
+  <div class="developer-info">
+    <article><h3>{{ developer_copy.limits_title }}</h3><p>{{ developer_copy.limits }}</p></article>
+    <article><h3>{{ developer_copy.legacy_title }}</h3><p>{{ developer_copy.legacy }}</p></article>
+  </div>
+</section>
+<section class="public-cta"><h2>{{ developer_copy.cta }}</h2><a class="btn lime" href="{{ api_keys_url }}">{{ developer_copy.cta }} →</a></section>
+{% endblock %}
