@@ -61,9 +61,6 @@
 @media(max-width:900px){.developer-mobile-link{display:inline-flex;padding:9px 12px;border:1px solid #ffffff45;border-radius:9px;font-size:12px;font-weight:700;color:#fff;white-space:nowrap}.developer-steps{grid-template-columns:1fr}.developer-example{grid-template-columns:1fr}}
 @media(max-width:900px){.developer-hero{grid-template-columns:1fr;min-height:0}.developer-console{max-width:560px;width:calc(100% - 28px);margin:10px 14px 25px 0}.developer-section-heading{display:block}.developer-section-heading>p{margin-top:16px}}
 @media(max-width:560px){.topbar .developer-mobile-link{font-size:11px;padding:8px}.developer-content{padding:70px 18px}.developer-hero{padding-top:58px;padding-bottom:70px}.developer-hero h1{font-size:48px}.developer-hero-lead{font-size:16px}.developer-console{width:calc(100% - 18px);margin-right:18px}.console-body{padding:25px 18px 30px;font-size:12px}.console-city{margin-left:43px}.console-stat{right:-12px;bottom:-27px}.developer-example{padding:25px}.developer-example pre{padding:15px}}
-/* Keep the line map hidden until its route bounds have been applied. */
-.line-map .map.route-map-loading{opacity:0;background:#e5ece5}
-.line-map .map{transition:opacity .18s ease}
 .line-page{display:flex;flex-direction:column}
 .line-page>.line-head{order:0}
 .line-page>.line-layout{order:1}

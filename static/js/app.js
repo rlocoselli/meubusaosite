@@ -8,10 +8,15 @@ function initCityMap(lat,lon,name){
 }
 
 function initLineMap(lat,lon,color){
- const el=document.getElementById('lineMap');if(!el)return;el.classList.add('route-map-loading');el.setAttribute('aria-busy','true');const map=L.map(el,{zoomControl:false,preferCanvas:true}).setView([lat,lon],12);window.transitLineMap=map;tile(map);L.control.zoom({position:'bottomright'}).addTo(map);startVehicles(map,document.querySelector('[data-vehicles-city]'));
+ const el=document.getElementById('lineMap');if(!el)return;
  const shape=parseData('shapeData').sort((a,b)=>Number(a.shape_pt_sequence??a.shapePtSequence??0)-Number(b.shape_pt_sequence??b.shapePtSequence??0)).map(coords).filter(Boolean);
  const located=parseData('lineStops').map((stop,index)=>({stop,index,point:coords(stop)})).filter(x=>x.point);
  const exact=shape.length>1,path=exact?shape:located.map(x=>x.point),markers=new Map();
+ const points=[...path,...located.map(x=>x.point)];
+ const fitOptions={paddingTopLeft:[55,55],paddingBottomRight:[55,90],maxZoom:15,animate:false};
+ const map=L.map(el,{zoomControl:false,preferCanvas:true});
+ if(points.length)map.fitBounds(L.latLngBounds(points),fitOptions);else map.setView([lat,lon],12);
+ window.transitLineMap=map;tile(map);L.control.zoom({position:'bottomright'}).addTo(map);startVehicles(map,document.querySelector('[data-vehicles-city]'));
  document.getElementById('routeGeometryLabel').textContent=path.length>1?(exact?el.dataset.exact:el.dataset.approximate):el.dataset.timetable;
  if(path.length>1){L.polyline(path,{color:'#fff',weight:10,opacity:.9}).addTo(map);L.polyline(path,{color,weight:6,opacity:.95,dashArray:exact?null:'8 10'}).addTo(map)}
  located.forEach(({stop,index,point})=>{
@@ -19,9 +24,7 @@ function initLineMap(lat,lon,color){
   const popup=document.createElement('div'),name=document.createElement('strong'),link=document.createElement('a');name.textContent=stop.stop_name||stop.stopName||stop.name||String(index+1);link.textContent=el.dataset.timetable+' ↗';link.href=`/city/${encodeURIComponent(el.dataset.city)}/stop/${encodeURIComponent(stop.stop_id??stop.stopId??stop.id??'')}`;popup.append(name,document.createElement('br'),link);marker.bindPopup(popup);markers.set(index,marker);
   marker.on('click',()=>{document.querySelectorAll('[data-stop-index]').forEach(row=>row.classList.toggle('selected',Number(row.dataset.stopIndex)===index));const row=document.querySelector(`[data-stop-index="${index}"]`);if(row&&!row.hidden){const panel=row.closest('.stop-card');if(window.matchMedia('(max-width:900px)').matches){panel.classList.remove('collapsed');const toggle=document.getElementById('toggleStops');toggle?.setAttribute('aria-expanded','true');if(toggle)toggle.textContent=transitCopy.collapse_stops+' ⌄';panel.scrollTo({top:panel.scrollTop+row.getBoundingClientRect().top-panel.getBoundingClientRect().top-25,behavior:'smooth'})}else row.scrollIntoView({behavior:'smooth',block:'nearest'})}});
  });
- const fit=()=>{const points=[...path,...located.map(x=>x.point)];if(!points.length){el.classList.remove('route-map-loading');el.removeAttribute('aria-busy');return}map.invalidateSize({pan:false});map.fitBounds(L.latLngBounds(points),{paddingTopLeft:[55,55],paddingBottomRight:[55,90],maxZoom:15});};
- const fitAfterLayout=()=>{fit();window.setTimeout(()=>{fit();el.classList.remove('route-map-loading');el.removeAttribute('aria-busy')},220);};
- if(map.whenReady)map.whenReady(fitAfterLayout);else fitAfterLayout();
+ const fit=()=>{if(!points.length)return;map.invalidateSize({pan:false});map.fitBounds(L.latLngBounds(points),fitOptions)};
  document.getElementById('fitRoute')?.addEventListener('click',fit);
  document.querySelectorAll('[data-focus-stop]').forEach(button=>{const marker=markers.get(Number(button.dataset.focusStop));button.disabled=!marker;button.addEventListener('click',()=>{document.querySelectorAll('[data-stop-index]').forEach(row=>row.classList.toggle('selected',row.dataset.stopIndex===button.dataset.focusStop));el.scrollIntoView({behavior:'smooth',block:'center'});map.setView(marker.getLatLng(),16);marker.openPopup()})});
 }
