@@ -447,6 +447,17 @@ def line_data(city_id, route_id, selected_date, direction=""):
         except (TypeError, ValueError):
             return 0
     stops = sorted(stops, key=sequence)
+    if stops and any(stop_view(stop)["lat"] is None or stop_view(stop)["lon"] is None for stop in stops):
+        city_stops = {
+            str(item.get("stop_id", item.get("stopId", item.get("id", "")))): stop_view(item)
+            for item in rows(api_get(f"getStops/{city_id}"))
+        }
+        for stop in stops:
+            point = stop_view(stop)
+            station = city_stops.get(point["id"])
+            if station:
+                if point["lat"] is None: stop["lat"] = station["lat"]
+                if point["lon"] is None: stop["lon"] = station["lon"]
     return dict(city_id=city_id, city=city_info, route=route, stops=stops, shape=shape, directions=directions, selected_direction=selected_direction, selected_date=selected_date.isoformat(), date_confirmed=date_confirmed)
 
 @app.get("/city/<city_id>/line/<path:route_id>")

@@ -37,6 +37,23 @@ class TransitTests(unittest.TestCase):
         with patch.object(transit, 'api_get', side_effect=upstream):
             self.assertEqual(self.client.get(f'/api/{CITY}/line/12?date=2026-10-10').get_json()['stops'], [])
 
+    def test_line_page_locates_stops_missing_coordinates(self):
+        def upstream(path, params=None):
+            if path.startswith('getStopsByRouteAndDirectionDate'):
+                return [{'stop_id': 'a', 'stop_name': 'Centre', 'stop_sequence': 1},
+                        {'stop_id': 'b', 'stop_name': 'Gare', 'stop_sequence': 2}]
+            if path == f'getStops/{CITY}':
+                return [{'stop_id': 'a', 'stop_lat': 45.18, 'stop_lon': 5.72},
+                        {'stop_id': 'b', 'stop_lat': 45.19, 'stop_lon': 5.73}]
+            return []
+        with patch.object(transit, 'api_get', side_effect=upstream):
+            response = self.client.get(f'/city/{CITY}/line/12?date=2026-10-10')
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('"lat": 45.18', html)
+        self.assertIn('"lon": 5.73', html)
+        self.assertIn('<main class="line-page"', html)
+
     def test_next_three_city_local_departures_and_cancellation(self):
         raw = [{'departure_time': time, 'trip_headsign': 'Station', 'status': status} for time, status in [('10:15:00','scheduled'), ('09:59:00','scheduled'), ('10:05:00','cancelled'), ('10:10:00','scheduled'), ('10:20:00','scheduled')]]
         with patch.object(transit, 'city_now', return_value=NOW), patch.object(transit, 'api_get', return_value=raw) as api:

@@ -10,21 +10,20 @@
       <a class="btn lime" href="{{ api_keys_url }}">{{ developer_copy.cta }} →</a>
       <a class="btn ghost" href="{{ api_docs }}" target="_blank" rel="noopener">{{ developer_copy.docs }} ↗</a>
     </div>
-    <div class="developer-trust"><span class="trust-dot"></span><span>API simples, segura e pronta para começar</span></div>
   </div>
   <div class="developer-console" aria-hidden="true">
     <div class="console-top"><span class="console-dots"><i></i><i></i><i></i></span><small>meu busão / api</small><b>•••</b></div>
     <div class="console-body">
-      <span class="console-comment">// dados de mobilidade em tempo real</span>
+      <span class="console-comment">// Meu Busão API</span>
       <p><b class="console-method">GET</b> <span>/getRoutes/</span></p>
       <p class="console-city">Grenoble_France</p>
-      <div class="console-response"><span>200</span><em> resposta recebida</em><strong>{ }</strong></div>
+      <div class="console-response"><span>200 OK</span><strong>{ }</strong></div>
     </div>
-    <div class="console-stat"><strong>120</strong><span>consultas<br>por minuto</span></div>
+    <div class="console-stat"><strong>API</strong><span>Meu Busão</span></div>
   </div>
 </section>
 <section class="developer-content">
-  <div class="section-heading developer-section-heading"><div><p class="eyebrow dark"><span></span>API</p><h2>{{ developer_copy.steps_title }}</h2></div><p>Do primeiro acesso à primeira consulta, tudo o que você precisa para começar está aqui.</p></div>
+  <div class="section-heading developer-section-heading"><div><p class="eyebrow dark"><span></span>API</p><h2>{{ developer_copy.steps_title }}</h2></div></div>
   <div class="developer-steps">
     {% for number, title, description in developer_copy.steps %}
     <article><div class="step-number">{{ number }}<span>→</span></div><h3>{{ title }}</h3><p>{{ description }}</p></article>
