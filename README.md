@@ -13,6 +13,8 @@ flask --app app run
 
 Despite its historical variable name, `MEUBUSAO_API_TOKEN` contains the legacy login identifier (username), not the API token returned by the service. Flask sends it as the `id` header to `/login`, stores the resulting token in server memory, renews it automatically when it expires or is rejected, and never exposes either value to the browser. The login identifier is optional for previewing the city experience but required for live routes, stops, shapes, and departures. Override the API with `MEUBUSAO_API_URL` if needed.
 
+For an individual credential, create a developer key at `https://mybusaoservice.audeladedonnees.fr/developer` and set `MEUBUSAO_API_KEY` on the website server. It takes precedence over `MEUBUSAO_API_TOKEN`, stays on the server, and is sent as the `token` request header. The website navigation and footer link to the key portal.
+
 Line and stop pages support a service date, and departures use each city's local time zone. Nearby-stop location is requested only when the visitor selects **Find nearby**; distances are straight-line measurements and walking times are estimates. Saved lines and stops remain in the visitor's browser.
 
 The default API does not publish service alerts. To connect an authenticated alert endpoint on the configured API host, set `MEUBUSAO_ALERTS_PATH`, for example `alerts/{city}`. The endpoint should return a JSON list (or `{"alerts": [...]}`) with `title`, `description`, and optional `route_ids` (citywide alerts omit this field). The UI distinguishes unsupported alerts, unavailable feeds, and an empty feed. Canceled departures are labeled when their payload supplies `cancelled: true` or a cancellation status.

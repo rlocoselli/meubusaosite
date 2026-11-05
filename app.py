@@ -30,6 +30,7 @@ API_BASE = os.environ.get("MEUBUSAO_API_URL", "https://mybusaoservice.audeladedo
 # Despite its historical name, this value is the legacy login identifier sent
 # to /login. The API response token is kept in memory and never exposed.
 API_LOGIN_ID = os.environ.get("MEUBUSAO_API_TOKEN", "")
+API_KEY = os.environ.get("MEUBUSAO_API_KEY", "")
 LANGUAGES = ("pt-br", "fr", "it", "es")
 
 CITIES = {
@@ -144,7 +145,7 @@ def api_get(path, params=None, max_age=180):
         return None
     for attempt in range(2):
         try:
-            response = requests.get(f"{API_BASE}/{path.lstrip('/')}", params=params, headers={"token": token}, timeout=12)
+            response = requests.get(f"{API_BASE}/{path.lstrip('/')}", params=params, headers={"token": token, "X-Client-Application": "web"}, timeout=12)
             if response.status_code in (401, 403) and attempt == 0:
                 token = api_token(force=True)
                 if token:
@@ -260,6 +261,8 @@ def _token_expiry(token):
         return time.time() + 3000
 
 def api_token(force=False):
+    if API_KEY:
+        return API_KEY
     if not API_LOGIN_ID:
         return ""
     if not force and _auth["token"] and time.time() < _auth["expires_at"]:
@@ -282,7 +285,8 @@ def template_context():
     ad_client = os.environ.get("ADSENSE_CLIENT", "ca-pub-6158185990205930").strip()
     ad_slots = {name: os.environ.get(f"ADSENSE_SLOT_{name.upper()}", "").strip() for name in ("home", "city", "timetable")}
     ads_allowed = request.endpoint in {"home", "city", "line", "stop_page", "journey_page"}
-    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_connected": bool(API_LOGIN_ID), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed}
+    key_labels = {"pt-br": "Criar chave API", "fr": "Créer une clé API", "it": "Crea chiave API", "es": "Crear clave API"}
+    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer", "api_key_label": key_labels[current_lang()], "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed}
 
 @app.get("/lang/<lang>")
 def set_language(lang):
@@ -510,7 +514,7 @@ _planner_lock = threading.Lock()
 
 def planner_network(city_id):
     configured = os.environ.get("MEUBUSAO_GTFS_" + city_id.upper(), "")
-    default = Path(app.root_path) / "gtfs" / "ni-managua-gtfs.zip" if city_id == "Managua_Nicaragua" and not API_LOGIN_ID else None
+    default = Path(app.root_path) / "gtfs" / "ni-managua-gtfs.zip" if city_id == "Managua_Nicaragua" and not (API_LOGIN_ID or API_KEY) else None
     path = Path(configured) if configured else default
     if configured and not path.is_file(): return None
     cache_key = (city_id, str(path), path.stat().st_mtime if path and path.is_file() else None)
@@ -629,7 +633,7 @@ def offline_page():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "api_configured": bool(API_LOGIN_ID), "api_authenticated": bool(_auth["token"] and time.time() < _auth["expires_at"])}
+    return {"status": "ok", "api_configured": bool(API_LOGIN_ID or API_KEY), "api_authenticated": bool(API_KEY or (_auth["token"] and time.time() < _auth["expires_at"]))}
 
 LEGACY_PAGES = {"app-ads.txt", "ads.txt"}
 
