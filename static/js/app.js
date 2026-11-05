@@ -8,7 +8,7 @@ function initCityMap(lat,lon,name){
 }
 
 function initLineMap(lat,lon,color){
- const el=document.getElementById('lineMap');if(!el)return;const map=L.map(el).setView([lat,lon],12);tile(map);startVehicles(map,document.querySelector('[data-vehicles-city]'));
+ const el=document.getElementById('lineMap');if(!el)return;const map=L.map(el,{zoomControl:false,preferCanvas:true}).setView([lat,lon],12);window.transitLineMap=map;tile(map);L.control.zoom({position:'bottomright'}).addTo(map);startVehicles(map,document.querySelector('[data-vehicles-city]'));
  const shape=parseData('shapeData').sort((a,b)=>Number(a.shape_pt_sequence??a.shapePtSequence??0)-Number(b.shape_pt_sequence??b.shapePtSequence??0)).map(coords).filter(Boolean);
  const located=parseData('lineStops').map((stop,index)=>({stop,index,point:coords(stop)})).filter(x=>x.point);
  const exact=shape.length>1,path=exact?shape:located.map(x=>x.point),markers=new Map();
@@ -19,7 +19,10 @@ function initLineMap(lat,lon,color){
   const popup=document.createElement('div'),name=document.createElement('strong'),link=document.createElement('a');name.textContent=stop.stop_name||stop.stopName||stop.name||String(index+1);link.textContent=el.dataset.timetable+' ↗';link.href=`/city/${encodeURIComponent(el.dataset.city)}/stop/${encodeURIComponent(stop.stop_id??stop.stopId??stop.id??'')}`;popup.append(name,document.createElement('br'),link);marker.bindPopup(popup);markers.set(index,marker);
   marker.on('click',()=>{document.querySelectorAll('[data-stop-index]').forEach(row=>row.classList.toggle('selected',Number(row.dataset.stopIndex)===index));const row=document.querySelector(`[data-stop-index="${index}"]`);if(row&&!row.hidden){const panel=row.closest('.stop-card');if(window.matchMedia('(max-width:900px)').matches){panel.classList.remove('collapsed');const toggle=document.getElementById('toggleStops');toggle?.setAttribute('aria-expanded','true');if(toggle)toggle.textContent=transitCopy.collapse_stops+' ⌄';panel.scrollTo({top:panel.scrollTop+row.getBoundingClientRect().top-panel.getBoundingClientRect().top-25,behavior:'smooth'})}else row.scrollIntoView({behavior:'smooth',block:'nearest'})}});
  });
- const fit=()=>{const points=[...path,...located.map(x=>x.point)];if(points.length)map.fitBounds(points,{padding:[45,45],maxZoom:16})};fit();document.getElementById('fitRoute')?.addEventListener('click',fit);
+ const fit=()=>{const points=[...path,...located.map(x=>x.point)];if(!points.length)return;map.invalidateSize({pan:false});map.fitBounds(L.latLngBounds(points),{paddingTopLeft:[55,55],paddingBottomRight:[55,90],maxZoom:15});};
+ const fitAfterLayout=()=>{fit();window.setTimeout(fit,180);};
+ if(map.whenReady)map.whenReady(fitAfterLayout);else fitAfterLayout();
+ document.getElementById('fitRoute')?.addEventListener('click',fit);
  document.querySelectorAll('[data-focus-stop]').forEach(button=>{const marker=markers.get(Number(button.dataset.focusStop));button.disabled=!marker;button.addEventListener('click',()=>{document.querySelectorAll('[data-stop-index]').forEach(row=>row.classList.toggle('selected',row.dataset.stopIndex===button.dataset.focusStop));el.scrollIntoView({behavior:'smooth',block:'center'});map.setView(marker.getLatLng(),16);marker.openPopup()})});
 }
 const normalizeSearch=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
