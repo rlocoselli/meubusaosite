@@ -1,4 +1,4 @@
-<section class="line-insights" data-insights-city="{{ city_id }}" data-insights-route="{{ route.id if route is defined else '' }}" aria-labelledby="insightsTitle">
+<section class="line-insights" hidden data-insights-city="{{ city_id }}" data-insights-route="{{ route.id if route is defined else '' }}" aria-labelledby="insightsTitle">
   <div class="line-insights-heading">
     <div>
       <p class="eyebrow dark"><span></span>{{ insights_copy.eyebrow }}</p>
@@ -7,10 +7,10 @@
     </div>
     <div class="realtime-panel">
       <strong><i></i>{{ insights_copy.realtime }}</strong>
-      <div class="realtime-feed-pills" data-realtime-feeds role="status">{{ insights_copy.unavailable }}</div>
+      <div class="realtime-feed-pills" data-realtime-feeds role="status"></div>
     </div>
   </div>
   <div class="line-insights-kpis" data-insights-kpis></div>
-  <div class="line-insights-routes" data-insights-routes aria-live="polite">{{ insights_copy.unavailable }}</div>
+  <div class="line-insights-routes" data-insights-routes aria-live="polite"></div>
   <p class="line-insights-note">{{ insights_copy.source_note }}</p>
 </section>

@@ -50,3 +50,9 @@ assert all(len(v)==len(PERSONAL_KEYS) for v in PERSONAL_VALUES.values())
 for locale,values in PERSONAL_VALUES.items():UX_COPY[locale].update(zip(PERSONAL_KEYS,values))
 
 for locale,value in {'pt-br':'Busque um trajeto válido antes de salvá-lo.','fr':'Recherchez un trajet valide avant de l’enregistrer.','it':'Cerca un percorso valido prima di salvarlo.','es':'Busca un trayecto válido antes de guardarlo.'}.items():UX_COPY[locale]['plan_before_save']=value
+for locale,values in {
+ 'pt-br':['Próxima partida por linha','Ver grade completa do dia','Atualizar próximos horários','Horário programado','Sem próximas partidas informadas para esta data.','Paradas da linha','Primeira partida da data'],
+ 'fr':['Prochain départ par ligne','Voir les horaires complets du jour','Actualiser les prochains départs','Horaire prévu','Aucun prochain départ fourni pour cette date.','Arrêts de la ligne','Premier départ à cette date'],
+ 'it':['Prossima partenza per linea','Vedi tutti gli orari del giorno','Aggiorna prossime partenze','Orario programmato','Nessuna prossima partenza fornita per questa data.','Fermate della linea','Prima partenza della data'],
+ 'es':['Próxima salida por línea','Ver todos los horarios del día','Actualizar próximas salidas','Horario programado','No se proporcionaron próximas salidas para esta fecha.','Paradas de la línea','Primera salida de la fecha'],
+}.items():UX_COPY[locale].update(zip(('next_by_line','expand_day_timetable','refresh_next','scheduled_only','no_next_for_date','route_stops','first_for_date'),values))

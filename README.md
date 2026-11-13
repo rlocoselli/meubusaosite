@@ -50,3 +50,9 @@ Saved offline pages show their save time, service date, and a warning after 24 h
 Set a strong `MEUBUSAO_ADMIN_TOKEN` in the server environment, then open `/admin/data-health`. Sign in with that token; it is not embedded in URLs or source files. The JSON endpoints also accept `Authorization: Bearer <token>`. Browser checks require the page's CSRF token. Admin pages and endpoints use `Cache-Control: no-store` and are excluded from service-worker caching.
 
 The dashboard shows the last route/stop/calendar checks observed by the current server process, failed or empty sources, old checks, and optional GTFS coverage dates from the city metadata file. Checking a city explicitly fetches its route and stop inventories. It does not run background monitoring or combine observations across server workers. It never returns API credentials, private URLs, or passenger locations.
+
+### Next departure first
+
+Line pages render the full stop itinerary before optional statistics and fetch exact map geometry only when the map opens. Statistics, live vehicle notices, and alert panels remain hidden when their sources provide no usable information. This does not change the scheduled itinerary's service-date warnings.
+
+Departure responses preserve `items` for full timetables and add `next_by_line`: the first valid upcoming departure per route ID and destination, excluding past and cancelled departures. Grouping happens before the general display limit so repeated departures from one line do not hide another line. Stop pages show this summary first; the complete day timetable is explicitly expandable and highlights each line's next departure. Timetable links from an itinerary keep the chosen line and open directly at the next-departure summary.

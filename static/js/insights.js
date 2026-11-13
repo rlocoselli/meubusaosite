@@ -3,6 +3,8 @@ if (insightsSection) {
   const copy = JSON.parse(document.getElementById('insightsCopy').textContent);
   const city = insightsSection.dataset.insightsCity;
   const route = insightsSection.dataset.insightsRoute;
+  let hasMetrics=false,hasRealtime=false;
+  const updateVisibility=()=>{insightsSection.hidden=!(hasMetrics||hasRealtime);insightsSection.querySelector('.realtime-panel').hidden=!hasRealtime;insightsSection.querySelector('.line-insights-note').hidden=!hasMetrics;insightsSection.querySelector('.line-insights-heading>div>p:last-child').hidden=!hasMetrics;insightsSection.querySelector('#insightsTitle').textContent=hasMetrics?(route?copy.line_title:copy.title):copy.realtime};
   const number = value => new Intl.NumberFormat(document.documentElement.lang).format(value);
   const date = value => {
     if (!value) return '—';
@@ -24,9 +26,9 @@ if (insightsSection) {
     const kpis = insightsSection.querySelector('[data-insights-kpis]');
     const list = insightsSection.querySelector('[data-insights-routes]');
     kpis.replaceChildren(); list.replaceChildren();
-    if (!data.connected || !data.available) { list.append(node('p','insights-empty',copy.unavailable)); return; }
+    hasMetrics=Boolean(data.connected&&data.available&&data.items?.length);updateVisibility();if(!hasMetrics)return;
     const items = data.items || [];
-    if (!items.length) { list.append(node('p','insights-empty',copy.no_data)); return; }
+    if (!items.length)return;
     const withBoardings = items.filter(item => item.boardingSampleCount > 0);
     const withAlightings = items.filter(item => item.alightingSampleCount > 0);
     kpis.append(
@@ -62,11 +64,8 @@ if (insightsSection) {
   const showRealtime = data => {
     const target = insightsSection.querySelector('[data-realtime-feeds]');
     target.replaceChildren();
-    if (!data.connected || !data.feeds?.length) {
-      target.append(node('span','realtime-pill muted',data.status === 'not_configured' ? copy.not_configured : copy.unavailable));
-      return;
-    }
-    data.feeds.forEach(feed => {
+    const feeds=data.connected?(data.feeds||[]).filter(feed=>feed.status==='ok'):[];hasRealtime=feeds.length>0;updateVisibility();if(!hasRealtime)return;
+    feeds.forEach(feed => {
       const pill = node('span',`realtime-pill ${feed.status === 'ok' ? 'is-live' : 'muted'}`,
         `${copy[feed.type] || feed.type} · ${copy[feed.status] || copy.error}`);
       pill.title = feed.feedTimestamp ? `${copy.refresh}: ${date(feed.feedTimestamp)}` : '';

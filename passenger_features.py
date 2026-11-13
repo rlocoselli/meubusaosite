@@ -61,3 +61,17 @@ def last_scheduled_services(network,stop_id,day,timezone,route_id=''):
         route_data=network.routes.get(route,{})
         result.append(dict(route_id=route,route=route_data.get('route_short_name') or route,headsign=headsign,time=moment.strftime('%H:%M'),departure_at=int(moment.timestamp()*1000),day_offset=departure//86400,scheduled=True))
     return sorted(result,key=lambda item:item['departure_at'])
+
+
+def next_departures_by_line(departures,day,now):
+    """One valid departure per route and direction, before any display limit."""
+    candidates=[]
+    for item in departures:
+        if item.get('cancelled') or item.get('departure_at') is None:continue
+        if day==now.date() and item['departure_at']<int(now.timestamp()*1000):continue
+        candidates.append(item)
+    selected={}
+    for item in sorted(candidates,key=lambda value:value['departure_at']):
+        key=(item.get('route_id') or item.get('route') or '•',item.get('headsign') or '')
+        selected.setdefault(key,item)
+    return sorted(selected.values(),key=lambda item:item['departure_at'])

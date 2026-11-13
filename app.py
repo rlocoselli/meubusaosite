@@ -27,7 +27,7 @@ from page_content import PUBLIC_PAGES
 from travel_copy import TRAVEL_COPY
 from transport import public_metadata, service_weekday, clean_color
 from ux_copy import UX_COPY
-from passenger_features import compare_journeys, last_scheduled_services
+from passenger_features import compare_journeys, last_scheduled_services, next_departures_by_line
 from data_health import DataHealth
 
 
@@ -275,6 +275,7 @@ def departure_view(item):
     return {
         "time": time_value,
         "hour": time_value[:2] if len(time_value) >= 5 and time_value[2] == ":" else "",
+        "route_id": str(get("route_id", get("routeId", "")) or ""),
         "route": str(get("route_short_name", get("routeShortName", get("route_id", get("routeId", "")))) or ""),
         "headsign": str(get("trip_headsign", get("tripHeadsign", get("headsign", get("route_long_name", "")))) or ""),
         "wheelchair": str(get("wheelchair_accessible", get("wheelchairAccessible", "0")) or "0"),
@@ -377,6 +378,13 @@ COPY["fr"].update({'donate_dollar': 'Donnez 1 $ pour aider', 'suggestions': 'Sug
 COPY["it"].update({'donate_dollar': 'Dona 1 $ per aiutare', 'suggestions': 'Suggerimenti'})
 
 COPY["es"].update({'donate_dollar': 'Dona 1 USD para ayudar', 'suggestions': 'Sugerencias'})
+
+for locale,hint in {
+    "pt-br":"Toque em Horários para ver a próxima partida nesta parada.",
+    "fr":"Touchez Horaires pour voir le prochain départ à cet arrêt.",
+    "it":"Tocca Orari per vedere la prossima partenza da questa fermata.",
+    "es":"Toca Horarios para ver la próxima salida de esta parada.",
+}.items(): COPY[locale]["stop_hint"]=hint
 
 @app.context_processor
 def template_context():
@@ -496,7 +504,7 @@ def journey_page(city_id):
     if not city_info: abort(404)
     return render_template("journey.html", city_id=city_id, city=city_info, selected_date=service_date(city_id).isoformat())
 
-def line_data(city_id, route_id, selected_date, direction=""):
+def line_data(city_id, route_id, selected_date, direction="", include_geometry=True):
     city_info = CITIES[city_id]
     all_routes = [route_view(x) for x in rows(api_get(f"getRoutes/{city_id}"))]
     route = next((x for x in all_routes if x["id"] == route_id), {"id": route_id, "short": route_id, "name": "", "color": city_info["accent"], "text_color": "#ffffff"})
@@ -523,16 +531,16 @@ def line_data(city_id, route_id, selected_date, direction=""):
         shape_id = str(stop.get("shape_id", stop.get("shapeId", "")) or "")
         if shape_id:
             break
-    shape = rows(api_get(f"getShapeById/{city_id}", {"shapeId": shape_id})) if shape_id else []
+    shape = rows(api_get(f"getShapeById/{city_id}", {"shapeId": shape_id})) if shape_id and include_geometry else []
 
-    if not stops or not shape:
+    if (not stops and not date_confirmed) or (include_geometry and not shape):
         trips = rows(api_get(f"getTrips/{city_id}/{route_id}"))
         matching = [trip for trip in trips if not selected_direction or str(trip.get("trip_headsign", trip.get("tripHeadsign", ""))) == selected_direction]
         trips = matching if selected_direction else trips
         trip_id = str((trips[0] if trips else {}).get("trip_id", (trips[0] if trips else {}).get("tripId", "")))
         if not stops and not date_confirmed:
             stops = rows(api_get(f"getStopsByTrip/{city_id}/{trip_id}")) if trip_id else []
-        shape = rows(api_get(f"getShapeByTripId/{city_id}", {"tripId": trip_id})) if trip_id else []
+        shape = rows(api_get(f"getShapeByTripId/{city_id}", {"tripId": trip_id})) if trip_id and include_geometry else []
     def sequence(item):
         try:
             return float(item.get("stop_sequence", item.get("stopSequence", 0)))
@@ -555,7 +563,7 @@ def line_data(city_id, route_id, selected_date, direction=""):
 @app.get("/city/<city_id>/line/<path:route_id>")
 def line(city_id, route_id):
     if city_id not in CITIES: abort(404)
-    return render_template("line.html", metadata=public_metadata(city_id), **line_data(city_id, route_id, service_date(city_id), request.args.get("direction", "")))
+    return render_template("line.html", metadata=public_metadata(city_id), **line_data(city_id, route_id, service_date(city_id), request.args.get("direction", ""), include_geometry=False))
 
 @app.get("/api/<city_id>/line/<path:route_id>")
 def line_preview(city_id, route_id):
@@ -580,12 +588,16 @@ def stop_page(city_id, stop_id):
     departures_raw = rows(api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": selected_date.strftime("%Y%m%d"), "time": "00:00:00", "limit": 200}))
     departures = normalized_departures(departures_raw, city_id, selected_date)
     departures.sort(key=lambda item: minutes_of(item["time"]) if minutes_of(item["time"]) is not None else float("inf"))
-    upcoming = next_departure_index(departures, city_now(city_id)) if selected_date == city_now(city_id).date() else -1
-    for position, item in enumerate(departures):
-        item["is_next"] = position == upcoming
+    next_by_line = next_departures_by_line(departures,selected_date,city_now(city_id))
+    next_ids = {id(item) for item in next_by_line}
+    selected_route = request.args.get("route", "")
+    if selected_route:
+        next_by_line.sort(key=lambda item:(item.get("route_id")!=selected_route and item.get("route")!=selected_route,item["departure_at"]))
+    for item in departures:
+        item["is_next"] = id(item) in next_ids
     grouped = group_timetable(departures)
     routes_here = [route_view(x) for x in rows(api_get(f"getRouteByStopId/{city_id}/{stop_id}"))]
-    return render_template("stop.html", city_id=city_id, city=city_info, stop=stop, grouped=grouped, departures=departures, routes_here=routes_here, selected_date=selected_date.isoformat())
+    return render_template("stop.html", city_id=city_id, city=city_info, stop=stop, grouped=grouped, departures=departures, routes_here=routes_here, selected_date=selected_date.isoformat(), next_by_line=next_by_line, selected_route=selected_route)
 
 
 def normalized_departures(raw, city_id, selected_date):
@@ -631,9 +643,15 @@ def departures(city_id):
     else:
         data = api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": selected_date.strftime("%Y%m%d"), "time": city_now(city_id).strftime("%H:%M:%S") if selected_date == city_now(city_id).date() else "00:00:00", "limit": 200})
     items = normalized_departures(data, city_id, selected_date)
+    if route_id:
+        for item in items:
+            item["route_id"] = item["route_id"] or route_id
+            item["route"] = item["route"] or route_id
+            item["headsign"] = item["headsign"] or direction
+    next_by_line = next_departures_by_line(items,selected_date,city_now(city_id))
     if selected_date == city_now(city_id).date():
         items = [item for item in items if item["minutes"] is not None]
-    return jsonify({"items": items[:3] if route_id else items[:12], "connected": data is not None, "date": selected_date.isoformat(), "timezone": str(city_now(city_id).tzinfo)})
+    return jsonify({"items": items[:3] if route_id else items[:12], "next_by_line": next_by_line, "connected": data is not None, "date": selected_date.isoformat(), "timezone": str(city_now(city_id).tzinfo)})
 
 @app.get("/api/<city_id>/stop/<path:stop_id>")
 def stop_details(city_id, stop_id):
@@ -642,7 +660,7 @@ def stop_details(city_id, stop_id):
     routes_data = api_get(f"getRouteByStopId/{city_id}/{stop_id}")
     departures_data = api_get(f"getNextDepartures/{city_id}/{stop_id}", {"date": selected_date.strftime("%Y%m%d"), "time": "00:00:00", "limit": 200})
     departures = normalized_departures(departures_data, city_id, selected_date)
-    return jsonify({"routes": [route_view(item) for item in rows(routes_data)], "items": departures,
+    return jsonify({"routes": [route_view(item) for item in rows(routes_data)], "items": departures, "next_by_line": next_departures_by_line(departures,selected_date,city_now(city_id)), "date": selected_date.isoformat(), "timezone": str(city_now(city_id).tzinfo),
         "times": [item["time"] for item in departures if item["time"]],
         "next": next_departure_index([item for item in departures if item["time"]], city_now(city_id)) if selected_date == city_now(city_id).date() else -1,
         "connected": departures_data is not None})
