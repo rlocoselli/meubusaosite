@@ -4,6 +4,9 @@ import os
 import base64
 import binascii
 import json
+import secrets
+import smtplib
+from email.message import EmailMessage
 import threading
 import time
 import math
@@ -19,6 +22,8 @@ import requests
 from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from page_content import PUBLIC_PAGES
 from travel_copy import TRAVEL_COPY
+from transport import public_metadata, service_weekday, clean_color
+from ux_copy import UX_COPY
 
 
 app = Flask(__name__)
@@ -188,7 +193,7 @@ def current_lang():
     return lang if lang in LANGUAGES else "pt-br"
 
 def tr(key):
-    return COPY[current_lang()].get(key, LEGAL_COPY[current_lang()].get(key, MAP_COPY[current_lang()].get(key, key)))
+    return COPY[current_lang()].get(key, LEGAL_COPY[current_lang()].get(key, MAP_COPY[current_lang()].get(key, UX_COPY[current_lang()].get(key, key))))
 
 def api_get(path, params=None, max_age=180):
     cache_key = path + repr(sorted((params or {}).items()))
@@ -248,7 +253,7 @@ def stop_view(item):
 
 def departure_view(item):
     get = item.get
-    time_value = str(get("departure_time", get("departureTime", get("time", get("arrival_time", get("arrivalTime", ""))))) or "")
+    time_value = str(get("predicted_departure_time") or get("estimated_departure_time") or get("departure_time", get("departureTime", get("time", get("arrival_time", get("arrivalTime", ""))))) or "")
     return {
         "time": time_value,
         "hour": time_value[:2] if len(time_value) >= 5 and time_value[2] == ":" else "",
@@ -256,6 +261,9 @@ def departure_view(item):
         "headsign": str(get("trip_headsign", get("tripHeadsign", get("headsign", get("route_long_name", "")))) or ""),
         "wheelchair": str(get("wheelchair_accessible", get("wheelchairAccessible", "0")) or "0"),
         "raw": item,
+        "status": "predicted" if get("predicted_departure_time") or get("estimated_departure_time") else "scheduled",
+        "platform": str(get("platform_code") or ""),
+        "updated_at": str(get("updated_at") or get("timestamp") or ""),
     }
 
 def minutes_of(time_value):
@@ -292,8 +300,9 @@ def route_view(item):
         "id": str(item.get("route_id", item.get("routeId", item.get("id", "")))),
         "short": str(item.get("route_short_name", item.get("short_name", item.get("routeShortName", "•")))) or "•",
         "name": item.get("route_long_name", item.get("long_name", item.get("routeLongName", ""))) or "",
-        "color": "#" + str(item.get("route_color", item.get("color", "2563eb"))).lstrip("#"),
-        "text_color": "#" + str(item.get("route_text_color", item.get("text_color", "ffffff"))).lstrip("#"),
+        "color": clean_color(item.get("route_color", item.get("color"))),
+        "type": str(item.get("route_type", "")),
+        "text_color": clean_color(item.get("route_text_color", item.get("text_color")), "ffffff"),
     }
 
 def _extract_login_token(payload):
@@ -343,13 +352,21 @@ def api_token(force=False):
         _auth["expires_at"] = _token_expiry(token) if token else 0.0
         return token
 
+COPY["pt-br"].update({'donate_dollar': 'Doe US$ 1 para ajudar', 'suggestions': 'Sugestões'})
+
+COPY["fr"].update({'donate_dollar': 'Donnez 1 $ pour aider', 'suggestions': 'Suggestions'})
+
+COPY["it"].update({'donate_dollar': 'Dona 1 $ per aiutare', 'suggestions': 'Suggerimenti'})
+
+COPY["es"].update({'donate_dollar': 'Dona 1 USD para ayudar', 'suggestions': 'Sugerencias'})
+
 @app.context_processor
 def template_context():
     ad_client = os.environ.get("ADSENSE_CLIENT", "ca-pub-6158185990205930").strip()
     ad_slots = {name: os.environ.get(f"ADSENSE_SLOT_{name.upper()}", "").strip() for name in ("home", "city", "timetable")}
     ads_allowed = request.endpoint in {"home", "city", "line", "stop_page", "journey_page"}
-    asset_versions = {name: (Path(app.static_folder) / name).stat().st_mtime_ns for name in ("css/app.css", "js/app.js", "js/insights.js")}
-    return {"t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "developer_copy": DEVELOPER_COPY[current_lang()], "insights_copy": INSIGHTS_COPY[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed, "asset_versions": asset_versions}
+    asset_versions = {name: (Path(app.static_folder) / name).stat().st_mtime_ns for name in ("css/app.css", "js/app.js", "js/insights.js", "js/passenger.js")}
+    return {"ux": UX_COPY[current_lang()], "all_cities": CITIES, "t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "developer_copy": DEVELOPER_COPY[current_lang()], "insights_copy": INSIGHTS_COPY[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed, "asset_versions": asset_versions}
 
 @app.get("/lang/<lang>")
 def set_language(lang):
@@ -385,9 +402,55 @@ def about_page():
 def faq_page():
     return render_template("public/faq.html", page=PUBLIC_PAGES[current_lang()]["faq"])
 
-@app.get("/contacts.html")
+SUGGESTION_RECIPIENTS = ("admin@audeladedonnees.fr", "locoselli2016@gmail.com")
+SUGGESTION_COPY = {
+    "pt-br": {"title": "Envie uma sugestão", "name": "Seu nome", "email": "Seu e-mail", "message": "Sua sugestão", "send": "Enviar sugestão", "sent": "Sugestão enviada. Obrigado!", "error": "Não foi possível enviar sua sugestão agora. Tente novamente mais tarde.", "invalid": "Preencha todos os campos corretamente.", "privacy": "Seu nome, e-mail e mensagem serão enviados à equipe para responder à sugestão."},
+    "fr": {"title": "Envoyer une suggestion", "name": "Votre nom", "email": "Votre e-mail", "message": "Votre suggestion", "send": "Envoyer la suggestion", "sent": "Suggestion envoyée. Merci !", "error": "Impossible d’envoyer votre suggestion pour le moment. Réessayez plus tard.", "invalid": "Veuillez remplir correctement tous les champs.", "privacy": "Votre nom, e-mail et message seront envoyés à l’équipe pour répondre à votre suggestion."},
+    "it": {"title": "Invia un suggerimento", "name": "Il tuo nome", "email": "La tua e-mail", "message": "Il tuo suggerimento", "send": "Invia suggerimento", "sent": "Suggerimento inviato. Grazie!", "error": "Impossibile inviare il suggerimento ora. Riprova più tardi.", "invalid": "Compila correttamente tutti i campi.", "privacy": "Nome, e-mail e messaggio saranno inviati al team per rispondere al suggerimento."},
+    "es": {"title": "Envía una sugerencia", "name": "Tu nombre", "email": "Tu correo", "message": "Tu sugerencia", "send": "Enviar sugerencia", "sent": "Sugerencia enviada. ¡Gracias!", "error": "No se pudo enviar tu sugerencia ahora. Inténtalo más tarde.", "invalid": "Completa correctamente todos los campos.", "privacy": "Tu nombre, correo y mensaje se enviarán al equipo para responder a tu sugerencia."},
+}
+
+@app.route("/contacts.html", methods=["GET", "POST"])
 def contact_page():
-    return render_template("public/contact.html", page=PUBLIC_PAGES[current_lang()]["contact"])
+    notice = None
+    status = 200
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        message = request.form.get("message", "").strip()
+        token = session.pop("suggestion_token", None)
+        if not token or not secrets.compare_digest(token, request.form.get("token", "")):
+            abort(400)
+        if request.form.get("website"):
+            abort(400)
+        if not (1 <= len(name) <= 120 and 3 <= len(email) <= 254 and "@" in email and "\n" not in email and "\r" not in email and 1 <= len(message) <= 5000):
+            notice, status = "invalid", 400
+        else:
+            host = os.environ.get("SMTP_HOST")
+            username = os.environ.get("SMTP_USERNAME")
+            password = os.environ.get("SMTP_PASSWORD")
+            sender = os.environ.get("SMTP_FROM", username)
+            if not all((host, username, password, sender)):
+                app.logger.error("Suggestion email SMTP configuration is missing")
+                notice, status = "error", 503
+            else:
+                mail = EmailMessage()
+                mail["Subject"] = "Meu Busão suggestion"
+                mail["From"] = sender
+                mail["To"] = ", ".join(SUGGESTION_RECIPIENTS)
+                mail["Reply-To"] = email
+                mail.set_content(f"Name: {name}\nEmail: {email}\n\n{message}")
+                try:
+                    with smtplib.SMTP(host, int(os.environ.get("SMTP_PORT", "587")), timeout=10) as smtp:
+                        smtp.starttls()
+                        smtp.login(username, password)
+                        smtp.send_message(mail)
+                    notice = "sent"
+                except (OSError, smtplib.SMTPException, ValueError):
+                    app.logger.exception("Could not send suggestion email")
+                    notice, status = "error", 503
+    session["suggestion_token"] = secrets.token_urlsafe(32)
+    return render_template("public/contact.html", page=PUBLIC_PAGES[current_lang()]["contact"], suggestion=SUGGESTION_COPY[current_lang()], notice=notice, token=session["suggestion_token"]), status
 
 @app.get("/terms.html")
 def terms_page():
@@ -403,9 +466,11 @@ def city(city_id):
     if not city_info: abort(404)
     if request.args.get("from") or request.args.get("to"):
         return redirect(url_for("journey_page", city_id=city_id) + "?" + request.query_string.decode("utf-8", errors="replace"))
-    routes = [route_view(x) for x in rows(api_get(f"getRoutes/{city_id}"))]
-    stops = rows(api_get(f"getStops/{city_id}"))
-    return render_template("city.html", city_id=city_id, city=city_info, routes=routes, stops=stops[:100], stop_count=len(stops), selected_date=service_date(city_id).isoformat())
+    routes_data = api_get(f"getRoutes/{city_id}")
+    stops_data = api_get(f"getStops/{city_id}")
+    routes = [route_view(x) for x in rows(routes_data)]
+    stops = rows(stops_data)
+    return render_template("city.html", city_id=city_id, city=city_info, routes=routes, stops=stops[:100], stop_count=len(stops), selected_date=service_date(city_id).isoformat(), api_connected=routes_data is not None and stops_data is not None, metadata=public_metadata(city_id))
 
 @app.get("/city/<city_id>/plan")
 def journey_page(city_id):
@@ -427,7 +492,7 @@ def line_data(city_id, route_id, selected_date, direction=""):
     if selected_direction not in directions:
         selected_direction = directions[0] if directions else ""
 
-    weekday = selected_date.strftime("%A").lower()
+    weekday = service_weekday(city_id, selected_date)
     stop_params = {"direction": selected_direction} if selected_direction else None
     date_data = api_get(f"getStopsByRouteAndDirectionDate/{city_id}/{selected_date.strftime('%Y%m%d')}/{route_id}", stop_params)
     stops = rows(date_data)
@@ -472,7 +537,7 @@ def line_data(city_id, route_id, selected_date, direction=""):
 @app.get("/city/<city_id>/line/<path:route_id>")
 def line(city_id, route_id):
     if city_id not in CITIES: abort(404)
-    return render_template("line.html", **line_data(city_id, route_id, service_date(city_id), request.args.get("direction", "")))
+    return render_template("line.html", metadata=public_metadata(city_id), **line_data(city_id, route_id, service_date(city_id), request.args.get("direction", "")))
 
 @app.get("/api/<city_id>/line/<path:route_id>")
 def line_preview(city_id, route_id):
