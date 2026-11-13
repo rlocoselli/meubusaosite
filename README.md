@@ -28,3 +28,25 @@ Optional operator information can be supplied with `MEUBUSAO_CITY_DATA_FILE`, an
 The date-specific line-stop endpoint is used first. When only the weekday endpoint is available, `service_calendar` can map verified holiday exceptions to a weekday schedule. The journey planner supports GTFS calendars and exceptions through API snapshots or a GTFS archive set with `MEUBUSAO_GTFS_<CITY_ID_IN_UPPERCASE>`. It retains the upstream reminders, offline pages, vehicle feeds, insights, and scoped alerts. The **Find transport** search is a quick line/stop search; the separate **Plan your journey** page handles origins and destinations. Feed availability still depends on the operator and server configuration. Optional proxy paths remain available through `MEUBUSAO_ALERTS_PATH` and `MEUBUSAO_VEHICLES_PATH`.
 
 Run checks with `python3 -m unittest discover -s tests -v`. No real email is sent by these checks. A live API login and SMTP credentials must be configured on the deployment to verify transport retrieval and suggestion delivery end to end.
+
+### Stop selection and nearby departures
+
+The city timetable uses an explicit stop picker with paginated, accent-insensitive name/code search. Stops with the same name keep separate IDs, codes, and platforms. Selecting a stop loads its departures and provides a full-day timetable link. Current stop departures refresh every minute while the page is visible; the upstream next-departure cache lasts at most 30 seconds.
+
+**Use my location** asks the browser for permission, ranks nearby stops by straight-line distance, and supports 1, 2, or 5 km radii. Location is held in tab session storage for five minutes and passed to the read-only nearby endpoint in a POST body. The stop inventory supplies a fallback when the provider lacks nearby search or distance fields. Maps are optional for selecting a nearby stop and viewing departures. Walking minutes remain estimates, and real location requires HTTPS or localhost. Development verification uses synthetic geolocation and stops; production retrieval still requires API credentials.
+
+### Personal transport tools and reading settings
+
+Returning visitors see their last city, recent stops, up to six favorite cards, and saved Home/Work journeys above the illustrated welcome section. Saved stop favorites show upcoming departures. Line favorites ask the visitor to choose a boarding stop before showing times. Data refreshes while the page is visible. Recent stops, boarding stops, commute shortcuts, and reading settings are stored only in the browser. Favorite alerts are scoped by route or stop; an unavailable feed is never presented as a disruption-free service.
+
+Journey results compare the alternatives found for arrival time, walking distance, and transfers. The algorithm retains schedule and accessibility checks. Home/Work shortcuts can be saved after a successful journey search and use the current service date/time when reopened. The reading controls offer larger text and stronger contrast without relying on color alone.
+
+Last-service badges use the complete planner network, service calendar, pickup restrictions, and after-midnight GTFS times. Frequency-based services without a confirmed final departure are excluded. A limited next-departure response never establishes that a trip is the last bus. These are **scheduled** final trips; operator changes and cancellations can still affect actual service.
+
+Saved offline pages show their save time, service date, and a warning after 24 hours. Individual or bulk refresh preserves the previous copy if the page or associated timetable cannot be fetched successfully. Browser offline storage availability still depends on the browser and device.
+
+### Private data health dashboard
+
+Set a strong `MEUBUSAO_ADMIN_TOKEN` in the server environment, then open `/admin/data-health`. Sign in with that token; it is not embedded in URLs or source files. The JSON endpoints also accept `Authorization: Bearer <token>`. Browser checks require the page's CSRF token. Admin pages and endpoints use `Cache-Control: no-store` and are excluded from service-worker caching.
+
+The dashboard shows the last route/stop/calendar checks observed by the current server process, failed or empty sources, old checks, and optional GTFS coverage dates from the city metadata file. Checking a city explicitly fetches its route and stop inventories. It does not run background monitoring or combine observations across server workers. It never returns API credentials, private URLs, or passenger locations.

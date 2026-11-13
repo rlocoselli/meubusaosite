@@ -1,6 +1,6 @@
 const VERSION='meubusao-offline-v2';
 const STATIC=VERSION+'-static',PAGES=VERSION+'-pages',DATA=VERSION+'-data';
-const ASSETS=['/offline','/my-space','/static/css/app.css','/static/js/app.js','/static/js/passenger.js','/static/js/transit.js','/static/js/travel.js','/static/vendor/leaflet/leaflet.js','/static/vendor/leaflet/leaflet.css','/static/vendor/leaflet/images/marker-icon.png','/static/vendor/leaflet/images/marker-shadow.png'];
+const ASSETS=['/offline','/my-space','/static/css/app.css','/static/js/app.js','/static/js/passenger.js','/static/js/location.js','/static/js/departures.js','/static/js/personal.js','/static/js/reading.js','/static/js/health.js','/static/js/transit.js','/static/js/travel.js','/static/vendor/leaflet/leaflet.js','/static/vendor/leaflet/leaflet.css','/static/vendor/leaflet/images/marker-icon.png','/static/vendor/leaflet/images/marker-shadow.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(STATIC).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('meubusao-offline-')&&!key.startsWith(VERSION+'-')).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 async function stored(response){const headers=new Headers(response.headers);headers.set('X-Saved-At',new Date().toISOString());return new Response(await response.clone().arrayBuffer(),{status:response.status,statusText:response.statusText,headers})}
@@ -8,7 +8,7 @@ async function trim(cache,max){const keys=await cache.keys();await Promise.all(k
 function volatile(url){return /\/vehicles$|\/nearby$|\/alerts$/.test(url.pathname)}
 async function fallback(request,cache){const cached=await cache.match(request)||await caches.match(request);if(!cached)throw Error('uncached');const headers=new Headers(cached.headers);headers.set('X-Offline','true');if(request.mode==='navigate'){const html=await cached.text(),stamp=headers.get('X-Saved-At')||'';return new Response(html.replace('</body>',`<script>document.documentElement.dataset.offlineSaved=${JSON.stringify(stamp)};</script></body>`),{status:200,headers})}return new Response(await cached.arrayBuffer(),{status:cached.status,headers})}
 self.addEventListener('fetch',event=>{
- const request=event.request,url=new URL(request.url);if(request.method!=='GET'||url.origin!==self.location.origin||url.pathname==='/sw.js'||volatile(url)||url.pathname.startsWith('/lang/'))return;
+ const request=event.request,url=new URL(request.url);if(request.headers.get('X-Meubusao-Refresh')==='1'||request.method!=='GET'||url.origin!==self.location.origin||url.pathname==='/sw.js'||volatile(url)||url.pathname.startsWith('/lang/')||url.pathname.startsWith('/admin/')||url.pathname.startsWith('/api/admin/'))return;
  const navigation=request.mode==='navigate',api=url.pathname.startsWith('/api/'),asset=url.pathname.startsWith('/static/');if(!navigation&&!api&&!asset)return;
  event.respondWith((async()=>{
   const cache=await caches.open(navigation?PAGES:api?DATA:STATIC);

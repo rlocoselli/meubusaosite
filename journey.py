@@ -122,7 +122,7 @@ class Network:
             if meters is not None and meters <= 800: candidates.append((sid,max(0,math.ceil(meters/1.2)),round(meters)))
         return sorted(candidates,key=lambda row:row[1])[:8]
 
-    def plan(self, origin, destination, day, start, accessible=False):
+    def plan(self, origin, destination, day, start, accessible=False, preference="fastest"):
         services=active_services(self.calendar,self.exceptions,day)
         yesterday=active_services(self.calendar,self.exceptions,day-timedelta(days=1))
         if not services and not yesterday: return dict(items=[], reason='no_service')
@@ -140,6 +140,14 @@ class Network:
             legs=[] if not duration else [dict(mode='walk',from_id=None,to_id=sid,from_name=origin,to_name=self.stops[sid]['name'],departure=clock(start),arrival=clock(start+duration),distance=meters,approximate=True)]
             labels[sid]=(start+duration,legs)
         journeys=[]
+        def score(arrival,legs):
+            walking=sum(leg.get('distance',0) for leg in legs if leg['mode']=='walk')
+            transfers=max(0,sum(leg['mode']=='bus' for leg in legs)-1)
+            if preference=='less_walking':return walking,arrival,transfers
+            if preference=='fewest_transfers':return transfers,arrival,walking
+            return arrival,transfers,walking
+        def better(arrival,legs,previous):
+            return previous is None or score(arrival,legs)<score(previous[0],previous[1])
         target_map={sid:(duration,meters) for sid,duration,meters in targets}
         def collect(current):
             best=None
@@ -147,7 +155,7 @@ class Network:
                 if sid not in current: continue
                 arrival,legs=current[sid]
                 if duration: legs=legs+[dict(mode='walk',from_id=sid,to_id=None,from_name=self.stops[sid]['name'],to_name=destination,departure=clock(arrival),arrival=clock(arrival+duration),distance=meters,approximate=True)]
-                if best is None or arrival+duration<best[0]:best=(arrival+duration,legs)
+                if better(arrival+duration,legs,best):best=(arrival+duration,legs)
             if best and best[0]<=horizon:
                 buses=sum(leg['mode']=='bus' for leg in best[1])
                 result=dict(departure=clock(start),arrival=clock(best[0]),duration=math.ceil((best[0]-start)/60),transfers=max(0,buses-1),legs=best[1])
@@ -163,10 +171,11 @@ class Network:
                     if board is not None and row['dropoff']=='0':
                         board_index,previous_legs=board
                         first=trip['times'][board_index]
-                        if first['departure'] <= row['arrival'] <= horizon and (sid not in updated or row['arrival']<updated[sid][0]):
+                        if first['departure'] <= row['arrival'] <= horizon:
                             route=self.routes.get(str(trip.get('route_id')), {})
                             leg=dict(mode='bus',trip_id=tid,route_id=str(trip.get('route_id','')),route=route.get('route_short_name') or str(trip.get('route_id','')),headsign=trip.get('trip_headsign',''),from_id=first['stop'],to_id=sid,from_name=self.stops[first['stop']]['name'],to_name=self.stops[sid]['name'],departure=clock(first['departure']),arrival=clock(row['arrival']),wheelchair=str(trip.get('wheelchair_accessible','0')))
-                            updated[sid]=(row['arrival'],previous_legs+[leg])
+                            candidate_legs=previous_legs+[leg]
+                            if better(row['arrival'],candidate_legs,updated.get(sid)):updated[sid]=(row['arrival'],candidate_legs)
                     if board is None and sid in labels and row['pickup']=='0' and row['departure']>=labels[sid][0] and row['departure']<=horizon:
                         previous_legs=labels[sid][1]
                         last_bus=next((leg for leg in reversed(previous_legs) if leg['mode']=='bus'),None)
@@ -183,9 +192,8 @@ class Network:
                 for sid,(arrival,legs) in updated.items():
                     if not legs or legs[-1]['mode']!='bus':continue
                     for other,duration,meters in self.neighbors(sid):
-                        if other not in walked or arrival+duration<walked[other][0]:
-                            leg=dict(mode='walk',from_id=sid,to_id=other,from_name=self.stops[sid]['name'],to_name=self.stops[other]['name'],departure=clock(arrival),arrival=clock(arrival+duration),distance=meters,approximate=True)
-                            walked[other]=(arrival+duration,legs+[leg])
+                        leg=dict(mode='walk',from_id=sid,to_id=other,from_name=self.stops[sid]['name'],to_name=self.stops[other]['name'],departure=clock(arrival),arrival=clock(arrival+duration),distance=meters,approximate=True)
+                        if better(arrival+duration,legs+[leg],walked.get(other)):walked[other]=(arrival+duration,legs+[leg])
                 updated=walked
             collect(updated)
             labels=updated

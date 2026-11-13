@@ -5,11 +5,14 @@ import base64
 import binascii
 import json
 import secrets
+import hashlib
+import hmac
 import smtplib
 from email.message import EmailMessage
 import threading
 import time
 import math
+import unicodedata
 from zoneinfo import ZoneInfo
 from datetime import date, datetime, timedelta
 from functools import lru_cache
@@ -24,6 +27,8 @@ from page_content import PUBLIC_PAGES
 from travel_copy import TRAVEL_COPY
 from transport import public_metadata, service_weekday, clean_color
 from ux_copy import UX_COPY
+from passenger_features import compare_journeys, last_scheduled_services
+from data_health import DataHealth
 
 
 app = Flask(__name__)
@@ -195,13 +200,23 @@ def current_lang():
 def tr(key):
     return COPY[current_lang()].get(key, LEGAL_COPY[current_lang()].get(key, MAP_COPY[current_lang()].get(key, UX_COPY[current_lang()].get(key, key))))
 
+data_health = DataHealth()
+
+def record_data_check(path, data):
+    kind = {"getRoutes":"routes", "getStops":"stops", "getCalendar":"calendar", "getNextDepartures":"departures", "getStopTimeByRouteAndDirectionAndDateAndStopId":"departures"}.get(path.split('/')[0])
+    city_id = next((part for part in path.split('/') if part in CITIES), None)
+    if kind and city_id:
+        data_health.record(city_id,kind,data is not None,len(rows(data)) if data is not None else None)
+
 def api_get(path, params=None, max_age=180):
+    if path.startswith("getNextDepartures/"): max_age = min(max_age, 30)
     cache_key = path + repr(sorted((params or {}).items()))
     cached = _cache.get(cache_key)
     if cached and time.time() - cached[0] < max_age:
         return cached[1]
     token = api_token()
     if not token:
+        record_data_check(path,None)
         return None
     for attempt in range(2):
         try:
@@ -213,9 +228,12 @@ def api_get(path, params=None, max_age=180):
             response.raise_for_status()
             data = response.json()
             _cache[cache_key] = (time.time(), data)
+            record_data_check(path,data)
             return data
         except (requests.RequestException, ValueError):
+            record_data_check(path,None)
             return None
+    record_data_check(path,None)
     return None
 
 
@@ -249,7 +267,7 @@ def stop_view(item):
         lon = None
     if lat is not None and (not math.isfinite(lat) or abs(lat)>90): lat = None
     if lon is not None and (not math.isfinite(lon) or abs(lon)>180): lon = None
-    return {"wheelchair": str(get("wheelchair_boarding", get("wheelchairBoarding", "0")) or "0"), "id": stop_id, "name": str(name), "lat": lat, "lon": lon, "code": str(get("stop_code", get("stopCode", get("code", stop_id))) or stop_id)}
+    return {"wheelchair": str(get("wheelchair_boarding", get("wheelchairBoarding", "0")) or "0"), "id": stop_id, "name": str(name), "lat": lat, "lon": lon, "code": str(get("stop_code", get("stopCode", get("code", stop_id))) or stop_id), "platform": str(get("platform_code", get("platformCode", "")) or ""), "description": str(get("stop_desc", get("description", "")) or "")}
 
 def departure_view(item):
     get = item.get
@@ -365,7 +383,7 @@ def template_context():
     ad_client = os.environ.get("ADSENSE_CLIENT", "ca-pub-6158185990205930").strip()
     ad_slots = {name: os.environ.get(f"ADSENSE_SLOT_{name.upper()}", "").strip() for name in ("home", "city", "timetable")}
     ads_allowed = request.endpoint in {"home", "city", "line", "stop_page", "journey_page"}
-    asset_versions = {name: (Path(app.static_folder) / name).stat().st_mtime_ns for name in ("css/app.css", "js/app.js", "js/insights.js", "js/passenger.js")}
+    asset_versions = {name: (Path(app.static_folder) / name).stat().st_mtime_ns for name in ("css/app.css", "js/app.js", "js/insights.js", "js/passenger.js", "js/transit.js", "js/travel.js", "js/location.js", "js/departures.js", "js/personal.js", "js/reading.js", "js/health.js")}
     return {"ux": UX_COPY[current_lang()], "all_cities": CITIES, "t": tr, "travel_copy": TRAVEL_COPY[current_lang()], "content": PAGE_CONTENT[current_lang()], "developer_copy": DEVELOPER_COPY[current_lang()], "insights_copy": INSIGHTS_COPY[current_lang()], "lang": current_lang(), "languages": LANGUAGES, "api_docs": f"{API_BASE}/apidocs/", "api_keys_url": f"{API_BASE}/developer?lang={current_lang().split('-')[0]}", "api_connected": bool(API_LOGIN_ID or API_KEY), "ad_client": ad_client, "ad_slots": ad_slots, "ads_allowed": ads_allowed, "asset_versions": asset_versions}
 
 @app.get("/lang/<lang>")
@@ -583,8 +601,22 @@ def normalized_departures(raw, city_id, selected_date):
         item["cancelled"] = value.get("cancelled") is True or status in {"cancelled", "canceled", "canceled_trip", "3"}
         minute_seconds = seconds(item["time"])
         item["departure_at"] = int((datetime.combine(selected_date, datetime.min.time(), tzinfo=now.tzinfo) + timedelta(seconds=minute_seconds)).timestamp()*1000) if minute_seconds is not None else None
+        if minute_seconds is None:
+            # Explicit live predictions may use ISO timestamps instead of GTFS clocks.
+            try:
+                moment = datetime.fromisoformat(item["time"].replace("Z", "+00:00"))
+                if moment.tzinfo is None: moment = moment.replace(tzinfo=now.tzinfo)
+                moment = moment.astimezone(now.tzinfo)
+                item["time"], item["hour"] = moment.strftime("%H:%M:%S"), moment.strftime("%H")
+                item["departure_at"] = int(moment.timestamp()*1000)
+                delta = (moment-now).total_seconds()/60
+                item["minutes"] = max(0, math.ceil(delta)) if selected_date == now.date() and delta >= 0 else None
+            except (ValueError, TypeError, OverflowError):
+                pass
+        scheduled_seconds = seconds(str(value.get("departure_time", value.get("departureTime", ""))))
+        item["scheduled_departure_at"] = int((datetime.combine(selected_date, datetime.min.time(), tzinfo=now.tzinfo)+timedelta(seconds=scheduled_seconds)).timestamp()*1000) if scheduled_seconds is not None else item["departure_at"]
         items.append(item)
-    return sorted(items, key=lambda item: minutes_of(item["time"]) if minutes_of(item["time"]) is not None else float("inf"))
+    return sorted(items, key=lambda item: item["departure_at"] if item["departure_at"] is not None else float("inf"))
 
 @app.get("/api/<city_id>/departures")
 def departures(city_id):
@@ -615,22 +647,38 @@ def stop_details(city_id, stop_id):
         "next": next_departure_index([item for item in departures if item["time"]], city_now(city_id)) if selected_date == city_now(city_id).date() else -1,
         "connected": departures_data is not None})
 
-@app.get("/api/<city_id>/nearby")
+@app.route("/api/<city_id>/nearby", methods=["GET", "POST"])
 def nearby_stops(city_id):
     if city_id not in CITIES: abort(404)
+    source = request.get_json(silent=True) if request.method == "POST" else request.args
     try:
-        lat, lon = float(request.args["lat"]), float(request.args["lon"])
-        if not math.isfinite(lat) or not math.isfinite(lon) or abs(lat)>90 or abs(lon)>180: raise ValueError()
-    except (KeyError, ValueError): abort(400)
-    data = api_get(f"getNearbyStops/{city_id}", {"lat": lat, "lon": lon, "radiusMeters": 1000})
-    items = []
+        lat, lon = float(source["lat"]), float(source["lon"])
+        radius = int(source.get("radius", 1000))
+        if not math.isfinite(lat) or not math.isfinite(lon) or abs(lat)>90 or abs(lon)>180 or radius not in (1000, 2000, 5000): raise ValueError()
+    except (KeyError, ValueError, TypeError): abort(400)
+    data = api_get(f"getNearbyStops/{city_id}", {"lat": lat, "lon": lon, "radiusMeters": radius})
+    # Some providers omit distances, or do not implement the nearby endpoint.
+    # Coordinates from the stop inventory are enough to compute straight-line distance.
+    if data is None or not rows(data):
+        inventory = api_get(f"getStops/{city_id}")
+        if inventory is not None:
+            data = inventory
+    items = {}
     for raw in rows(data):
+        if not isinstance(raw, dict): continue
         stop = stop_view(raw)
-        try: distance = float(raw["distance_meters"])
-        except (KeyError, ValueError, TypeError): continue
-        if not math.isfinite(distance) or distance < 0 or distance > 1000: continue
-        items.append({**stop, "distance": round(distance), "walk_minutes": max(1, math.ceil(distance / 75))})
-    return jsonify(items=sorted(items, key=lambda item:item["distance"]), connected=data is not None)
+        if not stop["id"]: continue
+        meters = distance({"lat": lat, "lon": lon}, stop) if stop["lat"] is not None and stop["lon"] is not None else None
+        if meters is None:
+            try: meters = float(raw.get("distance_meters", raw.get("distanceMeters")))
+            except (ValueError, TypeError): continue
+        if not math.isfinite(meters) or meters < 0 or meters > radius: continue
+        value = {**stop, "distance": round(meters), "walk_minutes": max(1, math.ceil(meters / 75))}
+        if stop["id"] not in items or value["distance"] < items[stop["id"]]["distance"]:
+            items[stop["id"]] = value
+    response = jsonify(items=sorted(items.values(), key=lambda item:(item["distance"], item["name"], item["id"]))[:30], connected=data is not None, radius=radius)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 @app.get("/api/<city_id>/alerts")
 def service_alerts(city_id):
@@ -640,13 +688,24 @@ def service_alerts(city_id):
     data = api_get(path.replace("{city}", city_id), {"lang": current_lang().split("-")[0]}, max_age=30)
     alerts = data.get("items", data.get("alerts", [])) if isinstance(data, dict) else rows(data)
     route = request.args.get("route", "")
+    stop = request.args.get("stop", "")
+    stop_routes = None
+    if stop:
+        values = api_get(f"getRouteByStopId/{city_id}/{stop}")
+        stop_routes = {route_view(value)["id"] for value in rows(values)} if values is not None else set()
     items = []
     for alert in alerts:
         if not isinstance(alert, dict): continue
         route_ids = alert.get("route_ids", [])
         if isinstance(route_ids, (str, int)): route_ids = [route_ids]
         if not route_ids and alert.get("route_id") is not None: route_ids = [alert["route_id"]]
-        if route and route_ids and route not in [str(value) for value in route_ids]: continue
+        route_ids = [str(value) for value in route_ids]
+        stop_ids = alert.get("stop_ids", [])
+        if isinstance(stop_ids,(str,int)): stop_ids=[stop_ids]
+        stop_ids = [str(value) for value in stop_ids]
+        if route and route_ids and route not in route_ids: continue
+        if stop and stop_ids and stop not in stop_ids: continue
+        if stop and not stop_ids and route_ids and not stop_routes.intersection(route_ids): continue
         items.append({"title": str(alert.get("title", alert.get("header_text", ""))), "description": str(alert.get("description", alert.get("description_text", ""))), "severity": str(alert.get("severity", "info"))})
     return jsonify(items=items, supported=bool(data.get("supported", True)) if isinstance(data, dict) else data is not None,
                    connected=bool(data.get("connected", True)) if isinstance(data, dict) else data is not None)
@@ -719,7 +778,7 @@ def journeys(city_id):
     if start is None or start>=86400 or not origin or not destination: abort(400)
     network = planner_network(city_id)
     if network is None: return jsonify(items=[],connected=False,reason="unavailable")
-    try: result = network.plan(origin,destination,day,start,request.args.get("accessible")=="1")
+    try: result = compare_journeys(network,origin,destination,day,start,request.args.get("accessible")=="1")
     except ValueError: abort(400)
     for item in result['items']:
         for leg in item['legs']:
@@ -727,17 +786,33 @@ def journeys(city_id):
             leg['departure_at'] = int((datetime.combine(day,datetime.min.time(),tzinfo=city_now(city_id).tzinfo)+timedelta(seconds=stamp)).timestamp()*1000) if stamp is not None else None
     return jsonify(**result, connected=True, date=day.isoformat(), timezone=str(city_now(city_id).tzinfo))
 
+def normalize_stop_search(text):
+    return ' '.join(''.join(char for char in unicodedata.normalize('NFD', str(text).casefold()) if not unicodedata.combining(char)).split())
+
 @app.get("/api/<city_id>/stops")
 def search_stops(city_id):
     if city_id not in CITIES: abort(404)
-    data=api_get(f"getStops/{city_id}")
-    query=request.args.get("q", "").casefold()
-    import unicodedata
-    normalize=lambda text: ''.join(char for char in unicodedata.normalize('NFD',text.casefold()) if not unicodedata.combining(char))
-    items=[stop_view(raw) for raw in rows(data)]
-    query=normalize(query)
-    items=[stop for stop in items if query in normalize(stop['name']+' '+stop['id'])]
-    return jsonify(items=items[:30],connected=data is not None)
+    try:
+        offset = int(request.args.get("offset", 0))
+        limit = int(request.args.get("limit", 30))
+        if offset < 0 or not 1 <= limit <= 50: raise ValueError()
+    except (ValueError, TypeError): abort(400)
+    data = api_get(f"getStops/{city_id}")
+    query = normalize_stop_search(request.args.get("q", ""))
+    items = {}
+    for raw in rows(data):
+        if not isinstance(raw, dict): continue
+        stop = stop_view(raw)
+        if not stop['id']: continue
+        haystack = normalize_stop_search(stop['name']+' '+stop['id']+' '+stop['code'])
+        if all(term in haystack for term in query.split()):
+            items.setdefault(stop['id'], stop)
+    def rank(stop):
+        name, code, ident = (normalize_stop_search(stop[key]) for key in ('name', 'code', 'id'))
+        priority = 0 if query and query in (code, ident) else 1 if query and name == query else 2 if name.startswith(query) else 3
+        return priority, name, code, ident
+    ordered = sorted(items.values(), key=rank)
+    return jsonify(items=ordered[offset:offset+limit], total=len(ordered), offset=offset, has_more=offset+limit<len(ordered), connected=data is not None)
 
 @app.get("/api/<city_id>/map-stops")
 def map_stops(city_id):
@@ -826,6 +901,79 @@ def legacy_page(page):
 @app.errorhandler(404)
 def not_found(error):
     return render_template("404.html"), 404
+
+
+
+
+@app.after_request
+def protect_admin_cache(response):
+    if request.path.startswith(("/admin/","/api/admin/")):
+        response.headers["Cache-Control"]="no-store, private"
+    return response
+
+@app.get("/api/<city_id>/last-service")
+def last_service(city_id):
+    if city_id not in CITIES: abort(404)
+    stop = request.args.get("stop", "").strip()
+    if not stop: abort(400)
+    network = planner_network(city_id)
+    if network is None: return jsonify(items=[],connected=False,supported=False)
+    return jsonify(items=last_scheduled_services(network,stop,service_date(city_id),city_now(city_id).tzinfo,request.args.get("route", "")),connected=True,supported=True)
+
+
+def health_authorized():
+    token=os.environ.get("MEUBUSAO_ADMIN_TOKEN", "")
+    if not token:return False
+    header=request.headers.get("Authorization", "")
+    if header.startswith("Bearer ") and secrets.compare_digest(header[7:].encode(),token.encode()):return True
+    marker=hmac.new(token.encode(),b"data-health-session-v1",hashlib.sha256).hexdigest()
+    return secrets.compare_digest(str(session.get("health_admin", "")),marker)
+
+@app.route("/admin/data-health",methods=["GET","POST"])
+def health_dashboard():
+    configured=bool(os.environ.get("MEUBUSAO_ADMIN_TOKEN"))
+    if "health_csrf" not in session:session["health_csrf"]=secrets.token_urlsafe(32)
+    error=False
+    if request.method=="POST":
+        if not secrets.compare_digest(request.form.get("csrf", ""),session["health_csrf"]):abort(400)
+        token=os.environ.get("MEUBUSAO_ADMIN_TOKEN", "")
+        if token and secrets.compare_digest(request.form.get("token", "").encode(),token.encode()):
+            session["health_admin"]=hmac.new(token.encode(),b"data-health-session-v1",hashlib.sha256).hexdigest()
+            return redirect(url_for("health_dashboard"))
+        error=True
+    return render_template("data_health.html",authorized=health_authorized(),configured=configured,error=error,csrf=session["health_csrf"]), 401 if error else 200
+
+@app.get("/api/admin/data-health")
+def health_data():
+    if not health_authorized():abort(401)
+    response=jsonify(items=data_health.snapshot(CITIES,public_metadata,bool(API_KEY or API_LOGIN_ID)),note="observed_checks")
+    response.headers["Cache-Control"]="no-store"
+    return response
+
+@app.post("/api/admin/data-health/check/<city_id>")
+def health_probe(city_id):
+    if not health_authorized():abort(401)
+    if city_id not in CITIES:abort(404)
+    if not request.headers.get("Authorization", "").startswith("Bearer ") and not secrets.compare_digest(request.headers.get("X-CSRF-Token", ""),session.get("health_csrf", "")):abort(403)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results=list(pool.map(lambda endpoint:api_get(f"{endpoint}/{city_id}",max_age=0),("getRoutes","getStops")))
+    for kind,data in zip(("routes","stops"),results):data_health.record(city_id,kind,data is not None,len(rows(data)) if data is not None else None)
+    inventory=rows(results[1])
+    if inventory:
+        sample_stop=stop_view(inventory[0])["id"]
+        if sample_stop:
+            data=api_get(f"getNextDepartures/{city_id}/{sample_stop}", {"date":city_now(city_id).strftime("%Y%m%d"), "time":city_now(city_id).strftime("%H:%M:%S"), "limit":1}, max_age=0)
+            data_health.record(city_id,"departures",data is not None,len(rows(data)) if data is not None else None)
+    response=jsonify(items=data_health.snapshot({city_id:CITIES[city_id]},public_metadata,bool(API_KEY or API_LOGIN_ID)))
+    response.headers["Cache-Control"]="no-store"
+    return response
+
+@app.post("/admin/data-health/logout")
+def health_logout():
+    if not secrets.compare_digest(request.form.get("csrf", ""),session.get("health_csrf", "")):abort(403)
+    session.pop("health_admin",None)
+    return redirect(url_for("health_dashboard"))
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=os.environ.get("FLASK_DEBUG") == "1")

@@ -10,17 +10,19 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=asset_versions['css/app.css']) }}">
+  <script>try{const r=JSON.parse(localStorage.getItem('meubusao-reading-v1')||'{}');document.documentElement.dataset.readingLarge=String(Boolean(r.large));document.documentElement.dataset.readingContrast=String(Boolean(r.contrast))}catch{}</script>
   {% block head %}{% endblock %}
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="{{ url_for('home') }}"><span class="brand-mark">M</span><span>Meu Busão</span></a>
     <button class="mobile-menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="mainNav">☰ <span>{{ t('menu') }}</span></button>
-    <nav id="mainNav" aria-label="{{ t('menu') }}"><a href="/">{{ t('home') }}</a><a href="/#planner" data-nearby-link>{{ t('nearby') }}</a><a href="/my-space">{{ t('favorites') }}</a><details class="nav-details"><summary>{{ t('more') }}</summary><div><a href="/contacts.html#suggestions">{{ t('suggestions') }}</a><a href="{{ url_for('developers_page') }}">{{ developer_copy.menu }}</a><a href="{{ url_for('journey_page', city_id=request.view_args.city_id) if request.view_args and request.view_args.get('city_id') else '/#cities' }}">{{ t('journey_title') }}</a><a href="/about.html">{{ t('about') }}</a><a href="/team.html">{{ t('team') }}</a><a href="/faqs.html">{{ t('faq') }}</a><a href="/contacts.html">{{ t('contact') }}</a><a href="/terms.html">{{ t('terms') }}</a><a href="/privacy.html">{{ t('privacy') }}</a><a href="{{ api_docs }}" target="_blank" rel="noopener">API ↗</a></div></details></nav>
+    <nav id="mainNav" aria-label="{{ t('menu') }}"><a href="/">{{ t('home') }}</a><a href="/#planner" data-nearby-link>{{ t('nearby') }}</a><a href="/my-space">{{ t('favorites') }}</a><details class="nav-details"><summary>{{ t('more') }}</summary><div><a href="#readingSettings">{{ t('reading_settings') }}</a><a href="/contacts.html#suggestions">{{ t('suggestions') }}</a><a href="{{ url_for('developers_page') }}">{{ developer_copy.menu }}</a><a href="{{ url_for('journey_page', city_id=request.view_args.city_id) if request.view_args and request.view_args.get('city_id') else '/#cities' }}">{{ t('journey_title') }}</a><a href="/about.html">{{ t('about') }}</a><a href="/team.html">{{ t('team') }}</a><a href="/faqs.html">{{ t('faq') }}</a><a href="/contacts.html">{{ t('contact') }}</a><a href="/terms.html">{{ t('terms') }}</a><a href="/privacy.html">{{ t('privacy') }}</a><a href="{{ api_docs }}" target="_blank" rel="noopener">API ↗</a></div></details></nav>
     <a class="donate-link" href="https://www.paypal.com/donate/?business=rlocoselli%40yahoo.com.br&amp;amount=1.00&amp;currency_code=USD" target="_blank" rel="noopener noreferrer">{{ t('donate_dollar') }} ↗</a>
     <div class="lang-switch" aria-label="Language">{% for code in languages %}<a class="{{ 'active' if code == lang }}" href="{{ url_for('set_language', lang=code) }}">{{ {'pt-br':'PT','fr':'FR','it':'IT','es':'ES'}[code] }}</a>{% endfor %}</div>
   </header>
   <div id="offlineBanner" class="offline-banner" hidden role="status"></div><div id="travelToast" class="travel-toast" hidden role="status"></div><main{% if request.endpoint == 'line' %} class="line-page"{% endif %}{% if ads_allowed %} data-ad-client="{{ ad_client }}"{% endif %}>{% block content %}{% endblock %}</main>
+  {% include '_reading.html' %}
   <footer><a class="brand" href="/"><span class="brand-mark">M</span><span>Meu Busão</span></a><div class="footer-links"><a href="{{ url_for('my_space') }}">☆ {{ t('my_space') }}</a><a href="/about.html">{{ t('about') }}</a><a href="/faqs.html">{{ t('faq') }}</a><a href="/terms.html">{{ t('terms') }}</a><a href="/privacy.html">{{ t('privacy') }}</a><button type="button" data-cookie-settings>{{ t('cookies') }}</button><a href="{{ url_for('developers_page') }}">{{ developer_copy.menu }}</a><a href="{{ api_docs }}" target="_blank">API ↗</a></div></footer>
   <aside class="cookie-banner" id="cookieBanner" role="dialog" aria-modal="true" aria-labelledby="cookieTitle" hidden><div class="cookie-icon">◉</div><div class="cookie-copy"><h2 id="cookieTitle">{{ t('cookie_title') }}</h2><p>{{ t('cookie_text') }} <a href="/privacy.html">{{ t('privacy') }}</a></p><div class="cookie-options" id="cookieOptions" hidden><label><span><b>{{ t('cookie_essential') }}</b><small>{{ t('cookie_essential_info') }}</small></span><input type="checkbox" checked disabled></label><label><span><b>{{ t('cookie_optional') }}</b><small>{{ t('cookie_optional_info') }}</small></span><input id="optionalCookies" type="checkbox"></label></div></div><div class="cookie-actions"><button class="cookie-btn primary" data-consent="all">{{ t('cookie_accept') }}</button><button class="cookie-btn" data-consent="essential">{{ t('cookie_reject') }}</button><button class="cookie-link" id="cookieCustomize">{{ t('cookie_settings') }}</button><button class="cookie-btn primary" id="cookieSave" hidden>{{ t('cookie_save') }}</button></div></aside>
   <nav class="bottom-nav" aria-label="{{ t('menu') }}"><a href="/">⌂<span>{{ t('home') }}</span></a><a href="/#planner" data-nearby-link>⌖<span>{{ t('nearby') }}</span></a><a href="/my-space">☆<span>{{ t('favorites') }}</span></a><button type="button" id="bottomMore">☰<span>{{ t('more') }}</span></button></nav>
@@ -31,10 +33,15 @@
   <script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
   <script src="{{ url_for('static', filename='js/app.js', v=asset_versions['js/app.js']) }}"></script>
   <script src="{{ url_for('static', filename='js/ads.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/transit.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/location.js', v=asset_versions['js/location.js']) }}"></script>
+  <script src="{{ url_for('static', filename='js/transit.js', v=asset_versions['js/transit.js']) }}"></script>
   <script src="{{ url_for('static', filename='js/insights.js', v=asset_versions['js/insights.js']) }}" defer></script>
-  <script src="{{ url_for('static', filename='js/travel.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/travel.js', v=asset_versions['js/travel.js']) }}"></script>
   <script src="{{ url_for('static', filename='js/passenger.js', v=asset_versions['js/passenger.js']) }}"></script>
+  <script src="{{ url_for('static', filename='js/departures.js', v=asset_versions['js/departures.js']) }}"></script>
+  <script src="{{ url_for('static', filename='js/reading.js', v=asset_versions['js/reading.js']) }}"></script>
+  <script src="{{ url_for('static', filename='js/personal.js', v=asset_versions['js/personal.js']) }}"></script>
+  <script src="{{ url_for('static', filename='js/health.js', v=asset_versions['js/health.js']) }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
